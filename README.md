@@ -39,8 +39,8 @@ The Linux command line to run for generating an instance is
 ```
 where
 
-* `<class_tag>` is tag for the instance (e.g., Cauchy, GRFrough, etc.),
-* `<img_size>` is tag for the size of the images,
+* `<class_tag>` is a tag for the instance (e.g., Cauchy, GRFrough, etc.),
+* `<img_size>` is a tag for the size of the images,
 * `<objf>` is the distance function (1: Euclidean, 2: Squared Euclidean, 3: 1-norm, 4: infinity-norm),
 * `<data_pic_1>` and `<data_pic_2>` are the data files of the two images.
 
