@@ -24,7 +24,7 @@
 #include <cmath>
 #include <iostream>
 
-#define F4DDR 1e4
+#define F4DDR 1e3
 
 //SGN_NODEARCID_TYPE
 
@@ -38,7 +38,152 @@ typedef double TpQuantityType;
 class TpInstance
 {
 public:
+    class euclidean_dist
+    {
+    public:
+        euclidean_dist(unsigned int fc = 0)
+        {
+            if(fc == 1)
+            {
+                distance_fptr = &euclidean_dist::esqrtd;
+            }
+            else if(fc == 2)
+            {
+                distance_fptr = &euclidean_dist::esqd;
+            }
+            else if(fc == 3)
+            {
+                distance_fptr = &euclidean_dist::eabsd;
+            }
+            else if(fc == 4)
+            {
+                distance_fptr = &euclidean_dist::emaxabsd;
+            }
+            else
+            {
+                distance_fptr = &euclidean_dist::esqd;
+            }
+        }
+        euclidean_dist(NodeArcIdType aN, unsigned int fc = 0)
+            : N(aN)
+        {
+            S = static_cast<NodeArcIdType>(std::sqrt(N));
+            NN = N * N;
+
+            if(fc == 1)
+            {
+                distance_fptr = &euclidean_dist::esqrtd;
+            }
+            else if(fc == 2)
+            {
+                distance_fptr = &euclidean_dist::esqd;
+            }
+            else if(fc == 3)
+            {
+                distance_fptr = &euclidean_dist::eabsd;
+            }
+            else if(fc == 4)
+            {
+                distance_fptr = &euclidean_dist::emaxabsd;
+            }
+            else
+            {
+                distance_fptr = &euclidean_dist::esqd;
+            }
+        }
+        ~euclidean_dist() { }
+        
+        inline NodeArcIdType size()
+        {
+            return NN;
+        }
+        
+        inline void setSrcDstMapPtrs(std::vector<NodeArcIdType>* srs_map_ptr, std::vector<NodeArcIdType>* dsts_map_ptr)
+        {
+            sources_map_ptr = srs_map_ptr;
+            destinations_map_ptr = dsts_map_ptr;
+            Nredi = destinations_map_ptr->size();
+        }
+        
+        inline double operator[](NodeArcIdType e) const
+        {
+            NodeArcIdType i = sources_map_ptr == nullptr ? e / N : (*sources_map_ptr)[e / Nredi];
+            NodeArcIdType j = destinations_map_ptr == nullptr ? e % N : (*destinations_map_ptr)[e % Nredi];
+
+            return (this->*distance_fptr)(i, j);
+        }
+        
+        inline double getMax() const
+        {
+            return (this->*distance_fptr)(0, N);
+        }
+        
+    private:
+    
+        double (euclidean_dist::*distance_fptr)(NodeArcIdType i, NodeArcIdType j) const = nullptr;
+        
+        inline std::pair<NodeArcIdType, NodeArcIdType> getXY(NodeArcIdType i)
+        {
+            return std::make_pair(i / S, i % S);
+        }
+        
+        inline double esqd(NodeArcIdType i, NodeArcIdType j) const
+        {
+            NodeArcIdTypeSGND x, y, w, z;
+            x = i / S;
+            y = i % S;
+            w = j / S;
+            z = j % S;
+            
+            return std::pow(x - w, 2.0) + std::pow(y - z, 2.0);
+        }
+        
+        inline double esqrtd(NodeArcIdType i, NodeArcIdType j) const
+        {
+            NodeArcIdTypeSGND x, y, w, z;
+            x = i / S;
+            y = i % S;
+            w = j / S;
+            z = j % S;
+            
+            return std::round(F4DDR * std::pow(std::pow(x - w, 2.0) + std::pow(y - z, 2.0), 0.5));
+        }
+        
+        inline double eabsd(NodeArcIdType i, NodeArcIdType j) const
+        {
+            NodeArcIdTypeSGND x, y, w, z;
+            x = i / S;
+            y = i % S;
+            w = j / S;
+            z = j % S;
+            
+            return std::abs(x - w) + std::abs(y - z);
+        }
+        
+        inline double emaxabsd(NodeArcIdType i, NodeArcIdType j) const
+        {
+            NodeArcIdTypeSGND x, y, w, z;
+            x = i / S;
+            y = i % S;
+            w = j / S;
+            z = j % S;
+            
+            return std::max(std::abs(x - w), std::abs(y - z));
+        }
+        
+        NodeArcIdType N;
+        NodeArcIdType Nredi;
+        NodeArcIdType S;
+        NodeArcIdType NN;
+
+        std::vector<NodeArcIdType>* sources_map_ptr = nullptr;
+        std::vector<NodeArcIdType>* destinations_map_ptr = nullptr;
+    };
+    #ifdef EDOTF
+    typedef class euclidean_dist tcosts;
+    #else
     typedef std::vector<TpCostType> tcosts;
+    #endif
 
     struct TProblemData
     {
@@ -98,7 +243,11 @@ public:
     void toWrite();
     void logInfo();
     void setName(std::string);
+    void reset(const std::shared_ptr<TProblemData>&);
     void write2file(std::string);
+    
+    std::shared_ptr<std::vector<double>> getProvidedBasis();
+    
     
     const std::shared_ptr<TProblemData>& getInstanceData();
     std::shared_ptr<TProblemData> generateData();
@@ -110,6 +259,7 @@ private:
     bool to_write_to_file = false;
 
     std::shared_ptr<TProblemData> tp_data_sptr;
+    std::shared_ptr<std::vector<double>> basis_sptr;
 };
 
 #endif // TPINST_H

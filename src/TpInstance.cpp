@@ -49,6 +49,12 @@ TpInstance::TpInstance(std::string ifnm)
     unsigned long long rnds; 
     ifname = ifnm;
     tp_data_sptr.reset(new TProblemData());
+
+    std::string basefn = ifnm;
+    basefn = basefn.substr(basefn.find_last_of("/") + 1, basefn.size());
+    basefn = basefn.substr(0, basefn.find_last_of("."));
+    tp_data_sptr->name = basefn;
+
     NodeArcIdType m;
     NodeArcIdType n;
     
@@ -96,6 +102,12 @@ TpInstance::TpInstance(std::string ifnm)
         tp_data_sptr->tot_dst_quantity += tp_data_sptr->destinations[j];
     }
     /// read cost matrix
+    #ifdef EDOTF
+    tp_data_sptr->costs = euclidean_dist(tp_data_sptr->n, tp_data_sptr->cost_f);
+    tp_data_sptr->minc = 0;
+    tp_data_sptr->maxc = tp_data_sptr->costs.getMax();
+    tp_data_sptr->avgc = 0.0;
+    #else
     tp_data_sptr->pvars.resize(m * n);
     tp_data_sptr->costs.resize(m * n, 0.0);
     tp_data_sptr->minc = std::numeric_limits<double>::max();
@@ -114,6 +126,7 @@ TpInstance::TpInstance(std::string ifnm)
             tp_data_sptr->avgc += tp_data_sptr->costs[n * i + j] * cf;
         }
     }
+    #endif
     
     ifs.close();
 }
@@ -183,7 +196,11 @@ bool TpInstance::TProblemData::reduce()
             destinations_map_bw[destinations_map[j]] = j + 1;
         
         swapped = false;
+        #ifdef DTMRKS
+        if(sources_map.size() > destinations_map.size())
+        #else
         if(sources_map.size() < destinations_map.size())
+        #endif
         {
             std::swap(M, N);
             std::swap(m, n);
@@ -196,6 +213,7 @@ bool TpInstance::TProblemData::reduce()
         }
         
         /// redo cost matrix
+        #ifndef EDOTF
         std::vector<double> newcmtx;
         pvars.clear();
         newcmtx.reserve(sources_map.size() * destinations_map.size());
@@ -220,6 +238,13 @@ bool TpInstance::TProblemData::reduce()
             }
         }
         costs = newcmtx;
+        #else
+        minc = 0.0;
+        maxc = costs.getMax();
+        avgc = 0.0;
+        
+        costs.setSrcDstMapPtrs(&(sources_map), &(destinations_map));
+        #endif
         
         m_orgn = m;
         n_orgn = n;
@@ -264,6 +289,13 @@ bool TpInstance::isToWrite()
 void TpInstance::setName(std::string nn)
 {
     ifname = nn;
+}
+
+void TpInstance::reset(const std::shared_ptr<TProblemData>& tpd_sptr)
+{
+    *tp_data_sptr = *tpd_sptr;
+    ifname = tpd_sptr->name + ".txt";
+    basis_sptr.reset();    
 }
 
 void TpInstance::write2file(std::string ofnm)
@@ -311,6 +343,11 @@ void TpInstance::write2file(std::string ofnm)
     ofs.close();
 }
 
+std::shared_ptr<std::vector<double>> TpInstance::getProvidedBasis()
+{
+    return basis_sptr;
+}
+
 const std::shared_ptr<TpInstance::TProblemData>& TpInstance::getInstanceData()
 {
     return tp_data_sptr;
@@ -318,6 +355,9 @@ const std::shared_ptr<TpInstance::TProblemData>& TpInstance::getInstanceData()
 
 std::shared_ptr<TpInstance::TProblemData> TpInstance::generateData()
 {
+    #ifdef EDOTF
+    throw std::invalid_argument("I cannot generate a unfiorm random instance if compiled with flag EDOTF, remove the directive and recompile");
+    #endif
     //return generateData(true,
     return generateData(tp_data_sptr->destinations[1] > 0.5,
                         tp_data_sptr->costs[3], tp_data_sptr->costs[4],
@@ -398,6 +438,7 @@ std::shared_ptr<TpInstance::TProblemData> TpInstance::generateData(bool ap, unsi
     tpdata_sptr->pvars.resize(tpdata_sptr->m * tpdata_sptr->n);
     std::uniform_int_distribution<unsigned int> rndc(minc, maxc);
     
+    #ifndef EDOTF
     double cf = 1.0 / (tpdata_sptr->m * tpdata_sptr->n);
     NodeArcIdType c = 0;
     tpdata_sptr->costs.resize(tpdata_sptr->m * tpdata_sptr->n, std::numeric_limits<double>::quiet_NaN());
@@ -410,6 +451,10 @@ std::shared_ptr<TpInstance::TProblemData> TpInstance::generateData(bool ap, unsi
         tpdata_sptr->maxc = std::max(*it, tpdata_sptr->maxc);
         tpdata_sptr->avgc += cf * (*it);
     }
+    #else
+    tpdata_sptr->minc = 0;
+    tpdata_sptr->maxc = tpdata_sptr->costs.getMax();
+    #endif
     
     FILE_LOG(logINFO) << "Instance generation time = " << GETOPTTMS(start) << " [ms]";
     

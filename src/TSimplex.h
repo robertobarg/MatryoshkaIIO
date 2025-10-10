@@ -89,6 +89,16 @@ public:
     /// main class methods
     optresult tsimplex(double tlim = std::numeric_limits<double>::quiet_NaN(), bool alginfolog = false, bool reptab = false);
     
+    std::shared_ptr<ts_sol> getBasis();
+    
+    std::shared_ptr<TSimplexData::ts_sol> getSolution();
+    std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>> getSolutionArcs(bool reduce_if = false, bool complete_spat = false);
+    
+    void setSolution(const std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>>&, 
+                     const std::shared_ptr<ts_sol>&, 
+                     const optresult&, 
+                     bool in_sol_red = false);
+    
 private:
     struct algo_config
     {
@@ -110,7 +120,6 @@ private:
     
     /// private method declarations
     void initVarData(tplex_alg_data::var_data& vdata);
-    
     /// shielding stuff
     NodeArcIdType compute_shields_v2(const TpInstance::tcosts& costs,
                                      bool redp,
@@ -122,6 +131,11 @@ private:
                                      std::vector<CellVar>& varredcsts, double shldeps = 1.0e-20);    
     
     /// compute red.costs
+    RCCOMPMETHOD(computeReducedCostsPol_8_3_redi);
+    RCCOMPMETHOD(computeReducedCostsPol_8_3);
+    RCCOMPMETHOD(computeReducedCostsPol_7_1_redi);
+    RCCOMPMETHOD(computeReducedCostsPol_7_1);
+    RCCOMPMETHOD(computeReducedCostsPol_7);
     RCCOMPMETHOD(computeReducedCostsPol_4);
     RCCOMPMETHOD(computeReducedCostsPol_3);
     /// std TP simplex 1st neg. r.c. rule

@@ -25,7 +25,8 @@ struct optcfg
     enum Algo
     {
         LP,
-        TS
+        TS,
+        RD
     };
     
     /// Configuration parameters

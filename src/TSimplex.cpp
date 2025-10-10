@@ -195,6 +195,42 @@ TSimplex::TSimplex(const std::shared_ptr<TpInstance::TProblemData>& idatsptr, un
         case 0:
             reduced_cost_fptr = &TSimplex::computeReducedCostsPol_0;
             break;
+        case 7:
+            /// Versions: 7 --> 7_1
+            if(ws2f == 0)
+                algcfg.window_size_2_factor = 0;
+            if(wsf == 0)
+                algcfg.window_size_factor = 0;
+            
+            if(tpdata_sptr->reduced)
+            {
+                reduced_cost_fptr    = &TSimplex::computeReducedCostsPol_7_1_redi;
+                reduced_cost_f2_ptr  = &TSimplex::computeReducedCostsPol_8_3_redi;
+            }
+            else
+            {
+                reduced_cost_fptr    = &TSimplex::computeReducedCostsPol_7_1;
+                reduced_cost_f2_ptr  = &TSimplex::computeReducedCostsPol_8_3;
+            }
+            break;
+        case 8:
+            /// Versions: 8 --> 8_4
+            if(ws2f == 0)
+                algcfg.window_size_2_factor = 0;
+            if(wsf == 0)
+                algcfg.window_size_factor = 0;
+            
+            if(tpdata_sptr->reduced)
+            {
+                reduced_cost_fptr   = &TSimplex::computeReducedCostsPol_8_3_redi;
+                reduced_cost_f2_ptr = &TSimplex::computeReducedCostsPol_7_1_redi;
+            }
+            else
+            {
+                reduced_cost_fptr   = &TSimplex::computeReducedCostsPol_8_3;
+                reduced_cost_f2_ptr = &TSimplex::computeReducedCostsPol_7_1;
+            }
+            break;
         case 1:
             reduced_cost_fptr = &TSimplex::computeReducedCostsPol_1;
             break;
@@ -264,6 +300,206 @@ void TSimplex::dump_tracing_data_to_file(std::string tag, std::string iname)
 }
 #endif
 
+std::shared_ptr<ts_sol> TSimplex::getBasis()
+{
+    return std::shared_ptr<ts_sol>(new ts_sol(optdata_sptr->quantities));
+}
+
+std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>> TSimplex::getSolutionArcs(bool reduce_if, bool complete_spat)
+{
+    if(!optdata_sptr && !optdata_sptr->vdata.spat_sptr)
+        return nullptr;
+    
+    std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>> retv = optdata_sptr->vdata.spat_sptr->getTSpxSolV2();
+    if(reduce_if && tpdata_sptr->reduced)
+    {
+        /// local vars
+        std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>> retv_red;
+        std::vector<NodeArcIdType> deg_srcs;
+        std::vector<NodeArcIdType> deg_dsts;
+        NodeArcIdType M;
+        NodeArcIdType N;
+        NodeArcIdType i;
+        NodeArcIdType j;
+        NodeArcIdType i_min_deg;
+        NodeArcIdType j_min_deg;
+        NodeArcIdType added_deg_arcs;
+        std::vector<bool> T;
+        /// init local vars
+        retv_red.reset(new std::vector<std::pair<NodeArcIdType, NodeArcIdType>>());
+        M = tpdata_sptr->m_orgn;
+        N = tpdata_sptr->n_orgn;
+        T.resize(M + N, false);
+        deg_srcs.resize(M, 0);
+        deg_dsts.resize(N, 0);
+        
+        /// retrive solution arcs
+        for(auto it = retv->begin(); it != retv->end(); it++)
+        {
+            i = tpdata_sptr->sources_map[it->first];
+            j = tpdata_sptr->destinations_map[it->second];
+            retv_red->push_back(tpdata_sptr->swapped ? std::make_pair(j, i) : std::make_pair(i, j));
+            
+            if(complete_spat)
+            {
+                T[retv_red->back().first] = T[M + retv_red->back().second] = true;
+                deg_srcs[i]++;
+                deg_dsts[j]++;
+            }
+        }
+        FILE_LOG(logINFO) << "Get initial solution ::: transport arcs >> " << retv_red->size();
+        /// complete spanning tree
+        added_deg_arcs = 0;
+        if(complete_spat)
+        {
+            i_min_deg = *std::min_element(deg_srcs.begin(), deg_srcs.end());
+            j_min_deg = *std::min_element(deg_dsts.begin(), deg_dsts.end());
+            
+            /// complete spanning tree
+            for(NodeArcIdType e = 0; e < T.size(); e++)
+            {
+                if(!T[e])
+                {
+                    retv_red->push_back(e < M ? std::make_pair(e, j_min_deg) : std::make_pair(i_min_deg, e - M));
+                    ++added_deg_arcs;
+                }
+            }
+            /*
+            FILE_LOG(logDEBUG) << "Compute TEST spanning tree ...";
+            std::shared_ptr<SpanningTree> basisspat_sptr;
+            basisspat_sptr.reset(new SpanningTree(tpdata_sptr->m_orgn + tpdata_sptr->n_orgn - 1, tpdata_sptr->m_orgn + tpdata_sptr->n_orgn, tpdata_sptr->m_orgn));
+            std::pair<NodeArcIdType, NodeArcIdType> retv = basisspat_sptr->compute(*retv_red);
+            FILE_LOG(logDEBUG) << "Spanning tree ::: " << retv.first << " nodes ::: " << retv.second << " arcs";
+             
+            /// reset tree colors
+            if(basisspat_sptr->checkTree())
+                throw std::runtime_error("detached nodes ...");
+             * */
+        }
+        FILE_LOG(logINFO) << "Get initial solution ::: degenerate arcs >> " << added_deg_arcs << " out of " << M + N - 1;
+        
+        return retv_red;
+    }
+    
+    return retv;
+}
+
+void TSimplex::setSolution(const std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>>& sol_arcs_sptr, 
+
+                           const std::shared_ptr<ts_sol>& sol_sptr, 
+                           const optresult& ext_sol_opt, 
+                           bool in_sol_red)
+{
+    if(!in_sol_red && tpdata_sptr->reduced)
+    {
+        /// local vars
+        std::shared_ptr<std::vector<std::pair<NodeArcIdType, NodeArcIdType>>> red_sol_arcs_sptr;
+        std::unique_ptr<std::list<std::pair<NodeArcIdType, NodeArcIdType>>> arcs_ls_uptr;
+        std::shared_ptr<ts_sol> red_sol_sptr;
+        NodeArcIdType M;
+        NodeArcIdType N;
+        NodeArcIdType i;
+        NodeArcIdType j;
+        NodeArcIdType added_arcs;
+        NodeArcIdType added_deg_arcs;
+        std::vector<bool> T;
+        bool sol_arc;
+        /// init local vars
+        red_sol_arcs_sptr.reset(new std::vector<std::pair<NodeArcIdType, NodeArcIdType>>());
+        arcs_ls_uptr.reset(new std::list<std::pair<NodeArcIdType, NodeArcIdType>>());
+        M = tpdata_sptr->m;
+        N = tpdata_sptr->n;
+        red_sol_sptr.reset(new ts_sol(M * N, std::numeric_limits<TpQuantityType>::quiet_NaN()));
+        T.resize(M + N, false);
+        
+        /// retrive solution arcs
+        for(auto it = sol_arcs_sptr->begin(); it != sol_arcs_sptr->end(); it++)
+        {
+            ///
+            i = tpdata_sptr->sources_map_bw[tpdata_sptr->swapped ? it->second : it->first];
+            j = tpdata_sptr->destinations_map_bw[tpdata_sptr->swapped ? it->first : it->second];
+            ///
+            if(i && j)
+            {
+                red_sol_arcs_sptr->push_back(std::make_pair(--i, --j));
+                red_sol_sptr->set(i * N + j, sol_sptr->get(it->first * tpdata_sptr->n_orgn + it->second));
+            }
+        }
+        FILE_LOG(logINFO) << "Set initial solution ::: transport arcs >> " << red_sol_arcs_sptr->size();
+        /// complete spanning tree (Prim's algorithm)
+        T[red_sol_arcs_sptr->front().first] = T[M + red_sol_arcs_sptr->front().second] = true;
+        arcs_ls_uptr->assign(red_sol_arcs_sptr->begin() + 1, red_sol_arcs_sptr->end());
+        added_arcs = 1;
+        added_deg_arcs = 0;
+        ///
+        while(!arcs_ls_uptr->empty()) // (added_arcs < M + N -1) // 
+        {
+            /// add sol. q. arcs
+            sol_arc = false;
+            for(auto it = arcs_ls_uptr->begin(); it != arcs_ls_uptr->end(); it++)
+            {
+                if((!T[it->first] && T[M + it->second]) || (T[it->first] && !T[M + it->second]))
+                {
+                    T[it->first] = T[M + it->second] = true;
+                    sol_arc = true;
+                    arcs_ls_uptr->erase(it--);
+                    ++added_arcs;
+                    break;
+                }
+            }
+            /// add sol. 0 arcs
+            if(!sol_arc)
+            {
+                ///
+                for(NodeArcIdType e = 0; e < T.size(); e++)
+                {
+                    if(!T[e])
+                    {
+                        for(NodeArcIdType f = e < M ? M : 0; f < (e < M ? M + N : M); f++)
+                        {
+                            if(T[f])
+                            {
+                                red_sol_arcs_sptr->push_back(e < M ? std::make_pair(e, f - M) : std::make_pair(f, e - M));
+                                red_sol_sptr->set(e < M ? e * N + f - M : f * N + e - M, EPSQ);
+                                T[e] = true;
+                                ++added_arcs;
+                                ++added_deg_arcs;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        FILE_LOG(logINFO) << "Set initial solution ::: degenerate arcs >> " << added_deg_arcs << " out of " << M + N - 1;
+        /*
+        FILE_LOG(logDEBUG) << added_arcs << " arcs added ::: expected >> " << M + N - 1;
+        FILE_LOG(logDEBUG) << "Compute TEST spanning tree ...";
+        std::shared_ptr<SpanningTree> basisspat_sptr;
+        basisspat_sptr.reset(new SpanningTree(tpdata_sptr->m + tpdata_sptr->n - 1, tpdata_sptr->m + tpdata_sptr->n, tpdata_sptr->m));
+        std::pair<NodeArcIdType, NodeArcIdType> retv = basisspat_sptr->compute(*red_sol_arcs_sptr);
+        FILE_LOG(logDEBUG) << "Spanning tree ::: " << retv.first << " nodes ::: " << retv.second << " arcs";
+         
+        /// reset tree colors
+        if(basisspat_sptr->checkTree())
+            throw std::runtime_error("detached nodes ...");
+         * */
+
+        ///
+        ext_sol_arcs_sptr = red_sol_arcs_sptr;
+        ext_sol_sptr = red_sol_sptr;
+        ext_sol_optres = ext_sol_opt;
+        ext_sol_optres.integer_values[0] = added_arcs;
+    }
+    else
+    {
+        ext_sol_arcs_sptr = sol_arcs_sptr;
+        ext_sol_sptr = sol_sptr;
+        ext_sol_optres = ext_sol_opt;
+    }
+}
+
 optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
 {
     /// Simplex for the transportation problem
@@ -316,6 +552,33 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
         #if defined TSSOLSPRS
         FILE_LOG(logINFO) << "Sparse matrix solution representation";
         #endif
+        
+        #if defined EDOTF
+        FILE_LOG(logINFO) << "Transportation costs >> Euclidean distance computed **on the fly**";
+        #endif
+        
+        #ifdef DTMRKS
+        if(tpdata_sptr->cost_f == 1)
+        {            FILE_LOG(logINFO) << "Dotmark objective function >> SQRT(d^2)";
+        }
+        else if(tpdata_sptr->cost_f == 2 || tpdata_sptr->cost_f == 0)
+        {
+            FILE_LOG(logINFO) << "Dotmark objective function >> d^2";
+        }
+        else if(tpdata_sptr->cost_f == 3)
+        {
+            FILE_LOG(logINFO) << "Dotmark objective function >> ABS(d)";
+        }
+        else if(tpdata_sptr->cost_f == 4)
+        {
+            FILE_LOG(logINFO) << "Dotmark objective function >> MAXABS(d)";
+        }
+        else
+        {
+        }
+        #else
+        FILE_LOG(logINFO) << "Linear objetive function coeff. read from file";
+        #endif
     }
     
     /// log opt start
@@ -349,7 +612,20 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
     /// compute initial solution
     auto st_0_1 = std::chrono::steady_clock::now();
     optresult optres;
-    if(algcfg.init_sol_method == 1)
+    if(ext_sol_arcs_sptr != nullptr)
+    {
+        FILE_LOG(logINFO) << "Set outer solution";
+        tplexd_sptr->quantities = std::move(*ext_sol_sptr);
+        
+        FILE_LOG(logINFO) << "Compute spanning tree ...";
+        basisspat_sptr.reset(new SpanningTree(tpdata_sptr->m + tpdata_sptr->n - 1, tpdata_sptr->m + tpdata_sptr->n, tpdata_sptr->m));
+        std::pair<NodeArcIdType, NodeArcIdType> retv = basisspat_sptr->compute(*ext_sol_arcs_sptr);
+        FILE_LOG(logINFO) << "Spanning tree ::: " << retv.first << " nodes ::: " << tpdata_sptr->m + tpdata_sptr->n - 1 << " arcs";
+
+        if((optres = ext_sol_optres).double_values.size() > 2)
+            cmp_times[0] += optres.double_values[2];
+    }
+    else if(algcfg.init_sol_method == 1)
     {   /// north-west corner
         optres = this->nwcorner(tplexd_sptr);
     }
@@ -445,8 +721,52 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
         auto st_4 = std::chrono::steady_clock::now();
         
         /// Compute reduced costs    
+        /// if dotmarks
+        #ifdef DTMRKS
+        entering_vars.clear();
+        /// if-case switch to neighboor computation
+        if(algcfg.rccpol == 8)
+        {            if((alg_state == 2 || 
+               (alg_state == 1 && alg_super_iter >= objf_improvs.size() &&
+                objf_improvs[alg_super_iter % objf_improvs.size()] + MYEPS < objf_improvs[(alg_super_iter + 1) % objf_improvs.size()] &&
+                DTMRK_SIGNIFIMPR * *std::max_element(objf_improvs.begin(), objf_improvs.end()) + MYEPS < algcfg.window_size_2_factor)))
+            {
+                rccmprv = (this->*reduced_cost_f2_ptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+                /// if-case switch back to shortlist
+                #ifdef EXPTRACING_2
+                if(alg_state != (entering_vars.empty() ? 3 : 2)) { FILE_LOG(logINFO) << "State is " << (entering_vars.empty() ? 3 : 2) << " at iter " << alg_super_iter << " ..."; }
+                #endif
+                alg_state = entering_vars.empty() ? 3 : 2;
+            }
+            
+            if(alg_state == 1 || alg_state == 3)
+                rccmprv = (this->*reduced_cost_fptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+        }
+        else if(algcfg.rccpol == 7)
+        {
+            if(alg_state == 1)
+            {
+                rccmprv = (this->*reduced_cost_fptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+                /// if-case switch back to shortlist
+                if(entering_vars.empty())
+                    alg_state = 2;
+                
+                #ifdef EXPTRACING_2
+                if(alg_state == 2) { FILE_LOG(logINFO) << "State is " << (2) << " at iter " << alg_super_iter << " ..."; }
+                #endif
+            }
+            
+            if(alg_state == 2)
+                rccmprv = (this->*reduced_cost_f2_ptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+        }
+        else
+            rccmprv = (this->*reduced_cost_fptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+        /// if boot up or closing phase, compute shortlist
+        #else
+        /// No special branching case
         entering_vars.clear();
         rccmprv = (this->*reduced_cost_fptr)(tplexd_sptr->quantities, tplexd_sptr->us, tplexd_sptr->vs, tplexd_sptr->vdata, varredcsts, entering_vars);
+        #endif
         
         /// update some counters
         if(rccmprv.first || algcfg.rccpol == 4)
@@ -474,7 +794,17 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
             /// start chrono
             auto st_5 = std::chrono::steady_clock::now();
             /// pivoting
+            /// pivot
             pivotrv = this->pivoting(tplexd_sptr, basisspat_sptr, entering_vars, objf_value, tot_q /*, !USESPAT4ALL */ );
+            /// update control values
+            #ifdef DTMRKS
+            if(alg_state == 1)
+            {
+                objf_value = basisspat_sptr->computeTSpxObjF(tpdata_sptr->costs, tplexd_sptr->quantities).first;
+                objf_improvs[alg_super_iter % objf_improvs.size()] = (iter_objfv - objf_value) / objf_value;
+                iter_objfv = objf_value;
+            }
+            #endif
             
             /// get time
             cmp_times[5] += GETOPTTMS(st_5);
@@ -595,9 +925,6 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
     step2_improv = step2_improv / double(optres.obj_value);
     step2_improv_plus = step2_improv_plus / double(optres.obj_value);
     step2_improv_minus = step2_improv_minus / double(optres.obj_value);
-    #ifdef RCS_TRACING
-    this->write2file_rcs_data();
-    #endif
     #endif
 
     /// Log opt. info.
@@ -1270,6 +1597,1048 @@ TSimplex::computeReducedCostsPol_0(const ts_sol& quantities,
     return std::make_pair(true, true);    
 }
 
+std::pair<bool,bool>
+TSimplex::computeReducedCostsPol_7_1_redi(const ts_sol& quantities,
+                                          const std::vector<double>& us,
+                                          const std::vector<double>& vs,
+                                          tplex_alg_data::var_data& vdata,
+                                          std::vector<CellVar>& varredcsts,
+                                          std::vector<CellVar>& entering_vars)
+{
+    /// local vars
+    std::vector<CellVar> sol;
+    NodeArcIdType Morg;
+    NodeArcIdType N;
+    NodeArcIdType Norg;
+    NodeArcIdType i;
+    NodeArcIdType iorg;
+    NodeArcIdType j;
+    NodeArcIdType jorg;
+    NodeArcIdType L;
+    NodeArcIdType d;
+    double crc;
+    
+    /// init local vars
+    N = tpdata_sptr->n;
+    Morg = tpdata_sptr->m_orgn;
+    Norg = tpdata_sptr->n_orgn;
+    L = std::sqrt(tpdata_sptr->n_orgn);
+    crc = std::numeric_limits<double>::quiet_NaN();
+    
+    /// get curr sol
+    vdata.spat_sptr->getTSpxSol(tpdata_sptr->costs, sol);
+
+    #ifdef EXPTRACING_2
+    rcs_neg = rcs_0 = rcs_pos = 0;
+    #endif
+    
+    /// main loop search
+    for(auto it = sol.begin(); it != sol.end(); it++)
+    {
+        /// center var
+        i = it->i;
+        j = it->j;
+        iorg = tpdata_sptr->sources_map[i];
+        jorg = tpdata_sptr->destinations_map[j];
+        
+        /// do the "cross" for i
+        d = 1;
+        while(jorg >= d && !tpdata_sptr->destinations_map_bw[jorg - d])
+            ++d;
+        if(jorg >= d && (jorg - d) / L == jorg / L) 
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[i * N + tpdata_sptr->destinations_map_bw[jorg - d] - 1] - us[i] - vs[tpdata_sptr->destinations_map_bw[jorg - d] - 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, tpdata_sptr->destinations_map_bw[jorg - d] - 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = 1;
+        while(jorg + d < Norg && !tpdata_sptr->destinations_map_bw[jorg + d])
+            ++d;
+        if(jorg + d < Norg && (jorg + d) / L == jorg / L) 
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[i * N + tpdata_sptr->destinations_map_bw[jorg + d] - 1] - us[i] - vs[tpdata_sptr->destinations_map_bw[jorg + d] - 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, tpdata_sptr->destinations_map_bw[jorg + d] - 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = L;
+        while(jorg + d < Norg && !tpdata_sptr->destinations_map_bw[jorg + d])
+            d += L;
+        if(jorg + d < Norg)
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[i * N + tpdata_sptr->destinations_map_bw[jorg + d] - 1] - us[i] - vs[tpdata_sptr->destinations_map_bw[jorg + d] - 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, tpdata_sptr->destinations_map_bw[jorg + d] - 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = L;
+        while(jorg >= d && !tpdata_sptr->destinations_map_bw[jorg - d])
+            d += L;
+        if(jorg >= d) 
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[i * N + tpdata_sptr->destinations_map_bw[jorg - d] - 1] - us[i] - vs[tpdata_sptr->destinations_map_bw[jorg - d] - 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, tpdata_sptr->destinations_map_bw[jorg - d] - 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        /// do the "cross" for j
+        d = 1;
+        while(iorg >= d && !tpdata_sptr->sources_map_bw[iorg - d])
+            ++d;
+        if(iorg >= d && (iorg - d) / L == iorg / L)
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[(tpdata_sptr->sources_map_bw[iorg - d] - 1) * N + j] - us[tpdata_sptr->sources_map_bw[iorg - d] - 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(tpdata_sptr->sources_map_bw[iorg - d] - 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = 1;
+        while(iorg + d < Morg && !tpdata_sptr->sources_map_bw[iorg + d])
+            ++d;
+        if(iorg + d < Morg && (iorg + d) / L == iorg / L)
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[(tpdata_sptr->sources_map_bw[iorg + d] - 1) * N + j] - us[tpdata_sptr->sources_map_bw[iorg + d] - 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(tpdata_sptr->sources_map_bw[iorg + d] - 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = L;
+        while(iorg + d < Morg && !tpdata_sptr->sources_map_bw[iorg + d])
+            d += L;
+        if(iorg + d < Morg)
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[(tpdata_sptr->sources_map_bw[iorg + d] - 1) * N + j] - us[tpdata_sptr->sources_map_bw[iorg + d] - 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(tpdata_sptr->sources_map_bw[iorg + d] - 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        d = L;
+        while(iorg >= d && !tpdata_sptr->sources_map_bw[iorg - d])
+            d += L;
+        if(iorg >= d)
+        {
+            /// comp rc
+            if((crc = (tpdata_sptr->costs[(tpdata_sptr->sources_map_bw[iorg - d] - 1) * N + j] - us[tpdata_sptr->sources_map_bw[iorg - d] - 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(tpdata_sptr->sources_map_bw[iorg - d] - 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+    }
+    
+    /// sort vars
+    std::sort(entering_vars.rbegin(), entering_vars.rend());
+    
+    return std::make_pair(true, false);
+}
+
+std::pair<bool,bool>
+TSimplex::computeReducedCostsPol_7_1(const ts_sol& quantities,
+                                     const std::vector<double>& us,
+                                     const std::vector<double>& vs,
+                                     tplex_alg_data::var_data& vdata,
+                                     std::vector<CellVar>& varredcsts,
+                                     std::vector<CellVar>& entering_vars)
+{
+    /// local vars
+    std::vector<CellVar> sol;
+    NodeArcIdType M;
+    NodeArcIdType N;
+    NodeArcIdType i;
+    NodeArcIdType j;
+    NodeArcIdType L;
+    NodeArcIdType Li;
+    NodeArcIdType Lj;
+    double crc;
+    
+    /// init local vars
+    M = tpdata_sptr->m;
+    N = tpdata_sptr->n;
+    L = std::sqrt(N);
+    crc = std::numeric_limits<double>::quiet_NaN();
+    
+    /// get curr sol
+    vdata.spat_sptr->getTSpxSol(tpdata_sptr->costs, sol);
+
+    /// main loop search
+    #ifdef EXPTRACING_2
+    rcs_neg = rcs_0 = rcs_pos = 0;
+    #endif
+    
+    for(NodeArcIdType c = 0; c < sol.size(); c++)
+    {
+        /// center var
+        i = sol[c].i;
+        Li = i / L;
+        j = sol[c].j;
+        Lj = j / L;
+        
+        /// do the "cross" for i
+        if(j > 0 && (j - 1) / L == Lj)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[i * N + j - 1] - us[i] - vs[j - 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, j - 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(j + 1 < N && (j + 1) / L == Lj)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[i * N + j + 1] - us[i] - vs[j + 1])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, j + 1, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(j + L < N)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[i * N + j + L] - us[i] - vs[j + L])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, j + L, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(j >= L)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[i * N + j - L] - us[i] - vs[j - L])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i, j - L, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        /// do the "cross" for j
+        if(i > 0 && (i - 1) / L == Li)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[(i - 1) * N + j] - us[i - 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i - 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(i + 1 < M && (i + 1) / L == Li)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[(i + 1) * N + j] - us[i + 1] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i + 1, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(i + L < M)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[(i + L) * N + j] - us[i + L] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i + L, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+        if(i >= L)
+        {
+            /// compute rc
+            if((crc = (tpdata_sptr->costs[(i - L) * N + j] - us[i - L] - vs[j])) < -MYEPS)
+            {
+                entering_vars.push_back(CellVar(i - L, j, crc));
+                
+                /// tracing
+                #ifdef EXPTRACING_2
+                ++comp_negrcs, ++rcs_neg;
+                #endif
+            }
+            /// tracing
+            #ifdef EXPTRACING_2
+            else if(crc > MYEPS)
+                rcs_pos++;
+            else
+                rcs_0++;
+            comp_rcs++;
+            #endif
+        }
+    }
+    
+    /// sort vars
+    std::sort(entering_vars.rbegin(), entering_vars.rend());
+    
+    return std::make_pair(true, false);
+}
+
+/// function pointers
+bool (*t_uvc_sq_ptr)(const double& vs_max, const double& u_i, const NodeArcIdType& aq) = nullptr;
+inline bool t_uvc_sq_1(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// squared root e. dist.
+    return (u_i + vs_max) > double(aq) + MYEPS;
+}
+inline bool t_uvc_sq_2(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// squared e. dist.
+    return u_i + vs_max > double(aq * aq) + MYEPS;
+}
+inline bool t_uvc_sq_3(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// abs. diff. e. dist.
+    return (u_i + vs_max) > double(aq) + MYEPS;
+}
+inline bool t_uvc_sq_4(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// abs. diff. e. dist.
+    return (u_i + vs_max) > double(aq) + MYEPS;
+}
+
+double (*comp_k_ptr)(const double& vs_max, const double& u_i, const NodeArcIdType& aq) = nullptr;
+inline double comp_k_1(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// squared root e. dist.
+    return std::sqrt((u_i + vs_max) * (u_i + vs_max) - aq * aq);
+}
+inline double comp_k_2(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// squared e. dist.
+    return std::sqrt(u_i + vs_max - aq * aq);
+}
+inline double comp_k_3(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{
+    /// abs. diff. e. dist.
+    return (u_i + vs_max - aq);
+}
+inline double comp_k_4(const double& vs_max, const double& u_i, const NodeArcIdType& aq)
+{ 
+    /// max abs. diff. e. dist.
+    return (u_i + vs_max);
+}
+
+NodeArcIdType (*comp_l_max_ptr)(const NodeArcIdType&, const NodeArcIdType&, const double&) = nullptr;
+inline NodeArcIdType comp_l_max_1(const NodeArcIdType& L, const NodeArcIdType& b, const double& kv)
+{
+    return std::ceil(kv);
+}
+inline NodeArcIdType comp_l_max_2(const NodeArcIdType& L, const NodeArcIdType& b, const double& kv)
+{
+    return std::ceil(kv);
+}
+inline NodeArcIdType comp_l_max_3(const NodeArcIdType& L, const NodeArcIdType& b, const double& kv)
+{
+    return std::ceil(kv);
+}
+inline NodeArcIdType comp_l_max_4(const NodeArcIdType& L, const NodeArcIdType& b, const double& kv)
+{
+    return std::ceil(kv); // L
+}
+
+std::pair<bool,bool>
+TSimplex::computeReducedCostsPol_8_3_redi(const ts_sol& quantities,
+                                          const std::vector<double>& us,
+                                          const std::vector<double>& vs,
+                                          tplex_alg_data::var_data& vdata,
+                                          std::vector<CellVar>& varredcsts,
+                                          std::vector<CellVar>& entering_vars)
+{
+    /// local vars
+    NodeArcIdType M;
+    NodeArcIdType N;
+    NodeArcIdType N_redi;
+    NodeArcIdType L;
+    NodeArcIdType Llim;
+    NodeArcIdType Lmax;
+    NodeArcIdType Lrow;
+    NodeArcIdType q;
+    //NodeArcIdType q2;
+    NodeArcIdType b;
+    NodeArcIdType idx;
+    unsigned long iter;
+    NodeArcIdType ctr;
+    NodeArcIdType ctr_MAX = std::max((NodeArcIdType)algcfg.window_size_factor, (NodeArcIdType)1);
+    NodeArcIdTypeSGND jdx;
+    NodeArcIdTypeSGND i;
+    NodeArcIdTypeSGND jl;
+    NodeArcIdTypeSGND jr;
+    double crc;
+    double ui;
+    double kval;
+    bool stoprc;
+    bool negrc;
+    bool allrc = false;
+    
+    /// init local vars
+    M = tpdata_sptr->m_orgn;
+    N = tpdata_sptr->n_orgn;
+    N_redi = tpdata_sptr->n;
+    L = std::sqrt(N);
+    crc = std::numeric_limits<double>::quiet_NaN();
+    /// compute max vs % L
+    vdata.vs_max = std::vector<double>(L, std::numeric_limits<double>::lowest());
+    for(NodeArcIdType j = 0; j < N; j++)
+    {
+        if(tpdata_sptr->destinations_map_bw[j])
+            vdata.vs_max[j / L] = std::max(vdata.vs_max[j / L], double(vs[tpdata_sptr->destinations_map_bw[j] - 1]));
+    }
+    /// tracing
+    #ifdef EXPTRACING_2
+    rcs_neg = rcs_0 = rcs_pos = 0;
+    #endif
+    /// init values
+    if(vdata.row_rotors.empty())
+    {
+        vdata.b.resize(M, 0);
+        vdata.Lrow.resize(M, 0);
+        for(i = 0; i < M; i++)
+            vdata.b[i] = i / L, vdata.Lrow[i] = std::max(i / L + 1, L - i / L);
+        vdata.row_rotors.resize(M, 0);
+        vdata.row_rotors_0.resize(M, 0);
+        vdata.rotor_flags.resize(M, true);
+        
+    /// assign f. ptr.
+    if(tpdata_sptr->cost_f == 1)            { t_uvc_sq_ptr = &t_uvc_sq_1; comp_k_ptr = &comp_k_1; comp_l_max_ptr = &comp_l_max_1; }
+    else if(tpdata_sptr->cost_f == 3)       { t_uvc_sq_ptr = &t_uvc_sq_3; comp_k_ptr = &comp_k_3; comp_l_max_ptr = &comp_l_max_3; }
+    else if(tpdata_sptr->cost_f == 4)       { t_uvc_sq_ptr = &t_uvc_sq_4; comp_k_ptr = &comp_k_4; comp_l_max_ptr = &comp_l_max_4; }
+    else                                    { t_uvc_sq_ptr = &t_uvc_sq_2; comp_k_ptr = &comp_k_2; comp_l_max_ptr = &comp_l_max_2; }
+    /// assign f. ptr.
+    }
+    else
+        vdata.row_rotors_0 = vdata.row_rotors;
+    /// update
+    vdata.rcneg_flags = std::vector<bool>(M, false);
+    vdata.row_flags = std::vector<bool>(M, true);
+    
+    /// compute reduced cost
+    /// main loop
+    iter = 0;
+    do
+    {
+        for(i = 0; i < M; i++)
+        {
+            /// skip removed rows
+            if(!iter && !tpdata_sptr->sources_map_bw[i])
+                vdata.row_flags[i] = false;
+            
+            /// skip eventually
+            if(!vdata.row_flags[i])
+                continue;
+            
+            /// init subloops values
+            idx = tpdata_sptr->sources_map_bw[i] - 1;
+            ui = us[idx];
+            b = vdata.b[i];
+            Lrow = vdata.Lrow[i];
+            q = vdata.row_rotors[i]++ % Lrow;
+            //q2 = q * q;
+            negrc = false;
+            
+            if( b + q < L && 
+                t_uvc_sq_ptr(vdata.vs_max[b + q], ui, q) && 
+               (NodeArcIdType)(std::round(kval = comp_k_ptr(vdata.vs_max[b + q], ui, q))) )
+            {
+                Lmax = comp_l_max_ptr(L, q, kval);
+                /// go right
+                Llim = std::min(i + q * L + std::min(L - i % L, Lmax), N);
+                for(stoprc = false, ctr = 0, jr = i + q * L; jr < Llim && !stoprc; jr++)
+                {
+                    if((jdx = tpdata_sptr->destinations_map_bw[jr]))
+                    {
+                        --jdx;
+                        if((crc = (tpdata_sptr->costs[idx * N_redi + jdx] - ui - vs[jdx])) < -MYEPS)
+                        {
+                            negrc = true;
+                            if(ctr++ < ctr_MAX)
+                                entering_vars.push_back(CellVar(idx, jdx, crc));
+                            else stoprc = true;
+                            /// tracing
+                            #ifdef EXPTRACING_2
+                            ++comp_negrcs, ++rcs_neg;
+                            #endif
+                        }
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        else if(crc > MYEPS)
+                            rcs_pos++;
+                        else
+                            rcs_0++;
+                        comp_rcs++;
+                        #endif
+                    }
+                }
+                /// go left
+                Llim = std::max(NodeArcIdTypeSGND(i + q * L - std::min(i % L, Lmax)), NodeArcIdTypeSGND(0));
+                for(stoprc = false, ctr = 0, jl = i + q * L - 1; jl >= NodeArcIdTypeSGND(Llim) && !stoprc; jl--)
+                {
+                    if((jdx = tpdata_sptr->destinations_map_bw[jl]))
+                    {
+                        --jdx;
+                        if((crc = (tpdata_sptr->costs[idx * N_redi + jdx] - ui - vs[jdx])) < -MYEPS)
+                        {
+                            negrc = true;
+                            if(ctr++ < ctr_MAX - 1)
+                                entering_vars.push_back(CellVar(idx, jdx, crc));
+                            else stoprc = true;
+                            /// tracing
+                            #ifdef EXPTRACING_2
+                            ++comp_negrcs, ++rcs_neg;
+                            #endif
+                        }
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        else if(crc > MYEPS)
+                            rcs_pos++;
+                        else
+                            rcs_0++;
+                        comp_rcs++;
+                        #endif
+                    }
+                }
+            }
+            if( q && b >= q &&
+                t_uvc_sq_ptr(vdata.vs_max[b - q], ui, q) && 
+               (NodeArcIdType)(std::round(kval = comp_k_ptr(vdata.vs_max[b - q], ui, q))) )
+            {
+                Lmax = comp_l_max_ptr(L, q, kval);
+                /// go right
+                Llim = std::min(i - q * L + std::min(L - i % L, Lmax), N);
+                for(stoprc = false, ctr = 0, jr = i - q * L; jr < Llim && !stoprc; jr++)
+                {
+                    if((jdx = tpdata_sptr->destinations_map_bw[jr]))
+                    {
+                        --jdx;
+                        if((crc = (tpdata_sptr->costs[idx * N_redi + jdx] - ui - vs[jdx])) < -MYEPS)
+                        {
+                            negrc = true;
+                            if(ctr++ < ctr_MAX)
+                                entering_vars.push_back(CellVar(idx, jdx, crc));
+                            else stoprc = true;
+                            /// tracing
+                            #ifdef EXPTRACING_2
+                            ++comp_negrcs, ++rcs_neg;
+                            #endif
+                        }
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        else if(crc > MYEPS)
+                            rcs_pos++;
+                        else
+                            rcs_0++;
+                        comp_rcs++;
+                        #endif
+                    }
+                }
+                /// go left
+                Llim = std::max(NodeArcIdTypeSGND(i - q * L - std::min(i % L, Lmax)), NodeArcIdTypeSGND(0));
+                for(stoprc = false, ctr = 0, jl = i - q * L - 1; jl >= NodeArcIdTypeSGND(Llim) && !stoprc; jl--)
+                {
+                    if((jdx = tpdata_sptr->destinations_map_bw[jl]))
+                    {
+                        --jdx;
+                        if((crc = (tpdata_sptr->costs[idx * N_redi + jdx] - ui - vs[jdx])) < -MYEPS)
+                        {
+                            negrc = true;
+                            if(ctr++ < ctr_MAX - 1)
+                                entering_vars.push_back(CellVar(idx, jdx, crc));
+                            else stoprc = true;
+                            /// tracing
+                            #ifdef EXPTRACING_2
+                            ++comp_negrcs, ++rcs_neg;
+                            #endif
+                        }
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        else if(crc > MYEPS)
+                            rcs_pos++;
+                        else
+                            rcs_0++;
+                        comp_rcs++;
+                        #endif
+                    }
+                }
+            }
+            vdata.rcneg_flags[i] = negrc || vdata.rcneg_flags[i];
+            /// check if it can get rid of the row 
+            if(vdata.row_rotors_0[i] % Lrow == vdata.row_rotors[i] % Lrow && !vdata.rcneg_flags[i])
+                vdata.row_flags[i] = false;
+            /// update direction
+            if(negrc && vdata.rotor_flags[i])
+                vdata.rotor_flags[i] = false;
+            /// reset to 0 if it can
+            if(!negrc && vdata.row_flags[i] && !vdata.rotor_flags[i])
+                vdata.row_rotors_0[i] = vdata.row_rotors[i] = 0, vdata.rcneg_flags[i] = false, vdata.rotor_flags[i] = true;
+        }
+        ++iter;
+        
+        if((allrc = !std::any_of(vdata.row_flags.begin(), vdata.row_flags.end(), [](bool i) { return i; } )))
+            break;        
+    }
+    while(entering_vars.empty() && !allrc);
+    
+    std::sort(entering_vars.rbegin(), entering_vars.rend());
+    
+    return std::make_pair(true, allrc);
+}
+
+std::pair<bool,bool>
+TSimplex::computeReducedCostsPol_8_3(const ts_sol& quantities,
+                                     const std::vector<double>& us,
+                                     const std::vector<double>& vs,
+                                     tplex_alg_data::var_data& vdata,
+                                     std::vector<CellVar>& varredcsts,
+                                     std::vector<CellVar>& entering_vars)
+{
+    /// local vars
+    NodeArcIdType M;
+    NodeArcIdType N;
+    NodeArcIdType L;
+    NodeArcIdType Llim;
+    NodeArcIdType Lmax;
+    NodeArcIdType Lrow;
+    NodeArcIdType q;
+    //NodeArcIdType q2;
+    NodeArcIdType b;
+    unsigned long iter;
+    NodeArcIdType ctr;
+    NodeArcIdType ctr_MAX = std::max((NodeArcIdType)algcfg.window_size_factor, (NodeArcIdType)1);
+    NodeArcIdTypeSGND i;
+    NodeArcIdTypeSGND jl;
+    NodeArcIdTypeSGND jr;
+    double ui;
+    double crc;
+    double kval;
+    bool stoprc;
+    bool negrc;
+    bool allrc = false;
+    
+    /// init local vars
+    M = tpdata_sptr->m;
+    N = tpdata_sptr->n;
+    L = std::sqrt(N);
+    crc = std::numeric_limits<double>::quiet_NaN();
+    /// compute max vs % L
+    vdata.vs_max = std::vector<double>(L, std::numeric_limits<double>::lowest());
+    for(NodeArcIdType j = 0; j < N; j++)
+        vdata.vs_max[j / L] = std::max(vdata.vs_max[j / L], double(vs[j]));
+    
+    #ifdef EXPTRACING_2
+    rcs_neg = rcs_0 = rcs_pos = 0;
+    #endif
+    /// init values
+    /*
+    if(vdata.uplr.empty())
+    {
+        vdata.uplr.resize(M, 0);
+        
+        std::vector<double> cumdstqs(N, 0.0);
+        for(NodeArcIdType j = 0; j < N; j++)
+            for(NodeArcIdType d = 0; d <= j; d++)
+                cumdstqs[j] += tpdata_sptr->destinations[d];
+        
+        std::vector<double> cumsrcqs(M, 0.0);
+        NodeArcIdType lastj = 0;
+        for(NodeArcIdType i = 0; i < M; i++)
+        {
+            for(NodeArcIdType s = 0; s <= i; s++)
+                cumsrcqs[i] += tpdata_sptr->sources[s];
+            
+            for(NodeArcIdType j = lastj; j + 1 < N; j++)
+                if(cumsrcqs[i] >= cumdstqs[j] && cumsrcqs[i] <= cumdstqs[j + 1])
+                {
+                    vdata.uplr[i] = (NodeArcIdTypeSGND(j) - NodeArcIdTypeSGND(i)) / NodeArcIdTypeSGND(L), lastj = j;
+                    //if(j > i) vdata.uplr[i] += 2; else if(j < i) vdata.uplr[i] -= 2;
+                }
+        }
+    }
+     * */
+    
+    if(vdata.row_rotors.empty())
+    {
+        vdata.b.resize(M, 0);
+        vdata.Lrow.resize(M, 0);
+        for(i = 0; i < M; i++)
+            vdata.b[i] = i / L, vdata.Lrow[i] = std::max(i / L + 1, L - i / L);
+        vdata.row_rotors.resize(M, 0);
+        vdata.row_rotors_0.resize(M, 0);
+        vdata.rotor_flags.resize(M, true);
+
+        /// assign f. ptr.
+        if(tpdata_sptr->cost_f == 1)            { t_uvc_sq_ptr = &t_uvc_sq_1; comp_k_ptr = &comp_k_1; comp_l_max_ptr = &comp_l_max_1; }
+        else if(tpdata_sptr->cost_f == 3)       { t_uvc_sq_ptr = &t_uvc_sq_3; comp_k_ptr = &comp_k_3; comp_l_max_ptr = &comp_l_max_3; }
+        else if(tpdata_sptr->cost_f == 4)       { t_uvc_sq_ptr = &t_uvc_sq_4; comp_k_ptr = &comp_k_4; comp_l_max_ptr = &comp_l_max_4; }
+        else                                    { t_uvc_sq_ptr = &t_uvc_sq_2; comp_k_ptr = &comp_k_2; comp_l_max_ptr = &comp_l_max_2; }
+        /// assign f. ptr.
+    }
+    else
+        vdata.row_rotors_0 = vdata.row_rotors;
+    
+    /// get basis
+    /*
+    vdata.row_rotors_0.resize(M, std::numeric_limits<NodeArcIdType>::max());
+    std::vector<CellVar> sol;
+    vdata.spat_sptr->getTSpxSol(tpdata_sptr->costs, sol);
+    for(auto it = sol.begin(); it != sol.end(); it++)
+    {
+        q = it->j / L >= it->i / L ? it->j / L - it->i / L : it->i / L - it->j / L;
+        Lrow = vdata.Lrow[it->i];
+        while(vdata.row_rotors[it->i] % Lrow != q)
+            ++vdata.row_rotors[it->i];
+        vdata.row_rotors_0[it->i] = std::min(vdata.row_rotors_0[it->i], vdata.row_rotors[it->i]);
+    }
+    vdata.row_rotors_0 = vdata.row_rotors;
+     * */
+    
+    /// update
+    vdata.rcneg_flags = std::vector<bool>(M, false);
+    vdata.row_flags = std::vector<bool>(M, true);
+    
+    /// compute reduced cost
+    /// main loop
+    iter = 0;
+    do
+    {
+        for(i = 0; i < M; i++)
+        {
+            /// skip eventually
+            if(!vdata.row_flags[i])
+                continue;
+            
+            /// init subloops values
+            ui = us[i];
+            b = vdata.b[i];
+            Lrow = vdata.Lrow[i];
+            q = vdata.row_rotors[i]++ % Lrow;
+            //q2 = q * q;
+            negrc = false;
+            
+            if(//vdata.uplr[i] >= 0 &&
+                b + q < L && 
+                t_uvc_sq_ptr(vdata.vs_max[b + q], ui, q) && 
+               (NodeArcIdType)(std::round(kval = comp_k_ptr(vdata.vs_max[b + q], ui, q))) )
+            {
+                Lmax = comp_l_max_ptr(L, q, kval);
+                /// go right, prev stuff //jp = i + q * L - i % L + std::max(int(i % L - Lmax), 0); //Llim = std::min(std::min(i % L, Lmax) + std::min(L - i % L, Lmax) + 1, L);
+                Llim = std::min(i + q * L + std::min(L - i % L, Lmax), N);
+                for(stoprc = false, ctr = 0, jr = i + q * L; jr < Llim && !stoprc; jr++)
+                {
+                    if((crc = (tpdata_sptr->costs[i * N + jr] - ui - vs[jr])) < -MYEPS)
+                    {
+                        negrc = true;
+                        if(ctr++ < ctr_MAX)
+                            entering_vars.push_back(CellVar(i, jr, crc));
+                        else stoprc = true;
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        ++comp_negrcs, ++rcs_neg;
+                        #endif
+                    }
+                    #ifdef EXPTRACING_2
+                    else if(crc > MYEPS)
+                        rcs_pos++;
+                    else
+                        rcs_0++;
+                    comp_rcs++;
+                    #endif
+                }
+                /// go left
+                Llim = std::max(NodeArcIdTypeSGND(i + q * L - std::min(i % L, Lmax)), NodeArcIdTypeSGND(0));
+                for(stoprc = false, ctr = 0, jl = i + q * L - 1; jl >= NodeArcIdTypeSGND(Llim) && !stoprc; jl--)
+                {
+                    if((crc = (tpdata_sptr->costs[i * N + jl] - ui - vs[jl])) < -MYEPS)
+                    {
+                        negrc = true;
+                        if(ctr++ < ctr_MAX - 1)
+                            entering_vars.push_back(CellVar(i, jl, crc));
+                        else stoprc = true;
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        ++comp_negrcs, ++rcs_neg;
+                        #endif
+                    }
+                    #ifdef EXPTRACING_2
+                    else if(crc > MYEPS)
+                        rcs_pos++;
+                    else
+                        rcs_0++;
+                    comp_rcs++;
+                    #endif
+                }
+            }
+            if(//vdata.uplr[i] <= 0 &&
+                q && b >= q &&
+                t_uvc_sq_ptr(vdata.vs_max[b - q], ui, q) && 
+               (NodeArcIdType)(std::round(kval = comp_k_ptr(vdata.vs_max[b - q], ui, q))) )
+            {
+                Lmax = comp_l_max_ptr(L, q, kval);
+                /// go right, pre stuff //jm = i - q * L - i % L + std::max(int(i % L - Lmax), 0); //Llim = std::min(std::min(i % L, Lmax) + std::min(L - i % L, Lmax) + 1, L);
+                Llim = std::min(i - q * L + std::min(L - i % L, Lmax), N);
+                for(stoprc = false,  ctr = 0, jr = i - q * L; jr < Llim && !stoprc; jr++)
+                {
+                    if((crc = (tpdata_sptr->costs[i * N + jr] - ui - vs[jr])) < -MYEPS)
+                    {
+                        negrc = true;
+                        if(ctr++ < ctr_MAX)
+                            entering_vars.push_back(CellVar(i, jr, crc));
+                        else stoprc = true;
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        ++comp_negrcs, ++rcs_neg;
+                        #endif
+                    }
+                    #ifdef EXPTRACING_2
+                    else if(crc > MYEPS)
+                        rcs_pos++;
+                    else
+                        rcs_0++;
+                    comp_rcs++;
+                    #endif
+                }
+                /// go left
+                Llim = std::max(NodeArcIdTypeSGND(i - q * L - std::min(i % L, Lmax)), NodeArcIdTypeSGND(0));
+                for(stoprc = false, ctr = 0, jl = i - q * L - 1; jl >= NodeArcIdTypeSGND(Llim) && !stoprc; jl--)
+                {
+                    if((crc = (tpdata_sptr->costs[i * N + jl] - ui - vs[jl])) < -MYEPS)
+                    {
+                        negrc = true;
+                        if(ctr++ < ctr_MAX - 1)
+                            entering_vars.push_back(CellVar(i, jl, crc));
+                        else stoprc = true;
+                        /// tracing
+                        #ifdef EXPTRACING_2
+                        ++comp_negrcs, ++rcs_neg;
+                        #endif
+                    }
+                    #ifdef EXPTRACING_2
+                    else if(crc > MYEPS)
+                        rcs_pos++;
+                    else
+                        rcs_0++;
+                    comp_rcs++;
+                    #endif
+                }
+            }
+            vdata.rcneg_flags[i] = negrc || vdata.rcneg_flags[i];
+            /// check if it can get rid of the row 
+            //if(!vdata.uplr[i] && vdata.row_rotors_0[i] % Lrow == vdata.row_rotors[i] % Lrow && !vdata.rcneg_flags[i])
+            if(vdata.row_rotors_0[i] % Lrow == vdata.row_rotors[i] % Lrow && !vdata.rcneg_flags[i])
+                vdata.row_flags[i] = false;
+            
+            /// update direction
+            if(negrc && vdata.rotor_flags[i])
+                vdata.rotor_flags[i] = false;
+            
+            /// reset to 0 if it can
+            //if((!negrc && vdata.row_flags[i] && !vdata.rotor_flags[i]) || (vdata.uplr[i] && !vdata.rcneg_flags[i]))
+            if(!negrc && vdata.row_flags[i] && !vdata.rotor_flags[i])
+            {
+                vdata.row_rotors_0[i] = vdata.row_rotors[i] = 0, vdata.rcneg_flags[i] = false, vdata.rotor_flags[i] = true; //, vdata.Lmax[i] = 0;
+                
+                //if(vdata.uplr[i] && !vdata.rcneg_flags[i]) vdata.uplr[i] = 0;
+            }
+        }
+        ++iter;
+        
+        if((allrc = !std::any_of(vdata.row_flags.begin(), vdata.row_flags.end(), [](bool i) { return i; } )))
+            break;        
+    }
+    while(entering_vars.empty() && !allrc);
+    
+    std::sort(entering_vars.rbegin(), entering_vars.rend());
+    
+    return std::make_pair(true, allrc);
+}
+
 TSimplex::pivs_data
 TSimplex::pivoting(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, 
                    const std::shared_ptr<SpanningTree>& bspat_sptr, 
@@ -1411,6 +2780,14 @@ TSimplex::pivoting(const std::shared_ptr<tplex_alg_data>& tplexd_sptr,
         else if(algcfg.spatvarsel)
         {
             /// update SPAT
+            /// First color, then merge!!!
+            /// Color
+            bspat_sptr->colorSubtree(std::make_pair(zeroed_vars.back().i, tpdata_sptr->m + zeroed_vars.back().j)
+            #ifdef EXPTRACING_2
+            , 0, -1, false, &node_clrng_counter
+            #endif
+            );
+            /// Merge
             if(algcfg.spatvarsel_greed_lvl < 2)
             {
                 for(auto it = unzeroed_vars.begin(); it  != unzeroed_vars.end(); it++)
@@ -1423,12 +2800,6 @@ TSimplex::pivoting(const std::shared_ptr<tplex_alg_data>& tplexd_sptr,
                     );
                 }
             }
-            
-            bspat_sptr->colorSubtree(std::make_pair(zeroed_vars.back().i, tpdata_sptr->m + zeroed_vars.back().j)
-            #ifdef EXPTRACING_2
-            , 0, -1, false, &node_clrng_counter
-            #endif
-            );
         }
         
         #ifdef EXPTRACING_2

@@ -18,6 +18,7 @@
 #include "TpInstance.h"
 #include "optcfg.h"
 
+#include "Matryoshka.h"
 #include "TSimplex.h"
 #include "MyLog.h"
 #include "util.h"
@@ -53,12 +54,21 @@ int main(int argc, char **argv)
         
         /// reduce instances if 0 r/c
         #ifdef REDINST
-        if(inst_sptr->getInstanceData()->reduce())
+        if(optc.opt_algo != optcfg::Algo::RD)
         {
-            FILE_LOG(logINFO)  << "Problem reduced (0 value rows and columns removed)";
+            bool prob_red = inst_sptr->getInstanceData()->reduce();
+            
+            if(prob_red)
+            {
+                FILE_LOG(logINFO) << "Problem reduced (0 value rows and columns removed)";
+            }
         }
         #endif
-
+    
+        optresult optres;
+        
+        if(optc.opt_algo == optcfg::Algo::TS)
+        {
         /// solve
         TSimplex tspx(inst_sptr->getInstanceData(), 
                       optc.alg_mode, 
@@ -67,18 +77,28 @@ int main(int argc, char **argv)
                       optc.dblp0);
         
         /// get opt. data
-        optresult optres = tspx.tsimplex(optc.timelimsec, true, true);
+        optres = tspx.tsimplex(optc.timelimsec, true, true);
 
+        #ifdef EXPTRACING_2
+        tspx.dump_tracing_data_to_file(std::string(getAlg(optc.opt_algo) + "_" + std::to_string(optc.alg_mode)), basefn);
+        #endif
+        }
+        else if(optc.opt_algo == optcfg::Algo::RD)
+        {
+            Matryoshka mat(0, inst_sptr->getInstanceData(), false);
+            optres = mat.run(optc);
+        }
+        else
+        {
+            FILE_LOG(logINFO) << "Algorithm " << getAlg(optc.opt_algo) << " unknown";
+        }
+        
         /// update tags
         optres.tags.resize(optres.tags_cnt);
         optres.tags[0] = basefn;
         optres.tags[1] = getAlg(optc.opt_algo) + "_" + std::to_string(optc.alg_mode);
-        
         /// print opt. result to file
         optres.write(resfn);
-        #ifdef EXPTRACING_2
-        tspx.dump_tracing_data_to_file(std::string(getAlg(optc.opt_algo) + "_" + std::to_string(optc.alg_mode)), basefn);
-        #endif
         
         if(!stdout)
             init_logging(true, logfn);

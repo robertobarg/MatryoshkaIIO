@@ -49,6 +49,7 @@ std::string getAlg(optcfg::Algo opta)
     {
         case optcfg::Algo::LP: return std::string("lp");
         case optcfg::Algo::TS: return std::string("ts");
+        case optcfg::Algo::RD: return std::string("rd");
         default: return std::string("none");
     }
 }
@@ -62,6 +63,10 @@ optcfg::Algo getAlg(std::string algstr)
     else if(algstr == "ts")
     {
         return optcfg::Algo::TS;
+    }
+    else if(algstr == "rd")
+    {
+        return optcfg::Algo::RD;
     }
     else
     {
