@@ -33,7 +33,7 @@ LibPath                := $(LibraryPathSwitch).
 AR       := ar crs
 CXX      := g++
 CC       := gcc
-CXXFLAGS :=  -O3 -fexpensive-optimizations -std=c++14 -Wall -Wno-sign-compare -Wno-reorder -Wno-deprecated-declarations -m64 -fPIC -fno-strict-aliasing -fexceptions -fno-signed-zeros -fno-trapping-math -frename-registers -funroll-loops -DSKIPTHETA0 -DLAZYCLUST -DREDINST -DINSVS -DCOUTRLOG $(Preprocessors)
+CXXFLAGS :=  -O3 -fexpensive-optimizations -std=c++14 -Wall -Wno-sign-compare -Wno-reorder -Wno-deprecated-declarations -m64 -fPIC -fno-strict-aliasing -fexceptions -fno-signed-zeros -fno-trapping-math -frename-registers -funroll-loops -DSKIPTHETA0 -DLAZYCLUST -DTSSOLSPRS -DREDINST -DINSVS -DDTMRKS -DEDOTF -DCOUTRLOG $(Preprocessors)
 CFLAGS   :=  -O2 -Wall $(Preprocessors)
 ASFLAGS  := 
 AS       := as
@@ -42,8 +42,8 @@ AS       := as
 ##
 ## User defined environment variables
 ##
-Objects0=$(IntermediateDirectory)/src_TSimplex.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_TpInstance.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_MyLog.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_main.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_TPHeuristics.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_optcfg.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_SpanningTreeImpl.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_optresult.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_Shielding.cpp$(ObjectSuffix) 
-
+Objects0=$(IntermediateDirectory)/src_Matryoshka.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_TSimplex.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_TpInstance.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_main.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_TPHeuristics.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_optcfg.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_MyLog.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_SpanningTreeImpl.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_optresult.cpp$(ObjectSuffix) $(IntermediateDirectory)/src_Shielding.cpp$(ObjectSuffix)
+	
 
 
 Objects=$(Objects0) 
@@ -73,6 +73,11 @@ PreBuild:
 ##
 ## Objects
 ##
+$(IntermediateDirectory)/src_Matryoshka.cpp$(ObjectSuffix): src/Matryoshka.cpp $(IntermediateDirectory)/src_Matryoshka.cpp$(DependSuffix)
+	$(CXX) $(IncludePCH) $(SourceSwitch) "src/Matryoshka.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_Matryoshka.cpp$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/src_Matryoshka.cpp$(DependSuffix): src/Matryoshka.cpp
+	@$(CXX) $(CXXFLAGS) $(IncludePCH) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/src_Matryoshka.cpp$(ObjectSuffix) -MF$(IntermediateDirectory)/src_Matryoshka.cpp$(DependSuffix) -MM src/Matryoshka.cpp
+
 $(IntermediateDirectory)/src_TSimplex.cpp$(ObjectSuffix): src/TSimplex.cpp $(IntermediateDirectory)/src_TSimplex.cpp$(DependSuffix)
 	$(CXX) $(IncludePCH) $(SourceSwitch) "src/TSimplex.cpp" $(CXXFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/src_TSimplex.cpp$(ObjectSuffix) $(IncludePath)
 $(IntermediateDirectory)/src_TSimplex.cpp$(DependSuffix): src/TSimplex.cpp
