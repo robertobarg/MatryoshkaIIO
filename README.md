@@ -66,6 +66,9 @@ The program writes the optimization results to a text file with extension `.optr
 The file contains a single line of space-separated values.
 Comments in the SQL file [sql/result.sql](sql/result.sql) describe the space-separated values as they are written into the `.optres` file by the program.
 
+**Notice** that, unlike the other implemented algorithms, the run times corresponding to the fields `runtime` and `doublev9` in the [SQL table](sql/result.sql) written by the Matryoshka algorithm in the `.optres` file include only the IIO time, not the initial solution time.
+To obtain the total run time, sum the values of `doublev9` and `doublev1`.
+
 Compilation and sample instance solution tests have been run also on a machine running Windows operating system.
 
 
