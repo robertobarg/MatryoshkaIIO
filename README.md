@@ -3,10 +3,10 @@
 This archive is distributed under the [CC BY-NC-SA 4.0 License](LICENSE).
 
 This is a repository of the software and data
-that were used in the research [An improved variant of the Iterated Inside Out
+that were used in the research **An improved variant of the Iterated Inside Out
 algorithm for solving the optimal transport
-DOTmark instances]() by R. Bargetto, F. Della Croce, and R. Scatamacchia.
-The research extends to image processing research [Iterated Inside Out: a new exact algorithm for the transportation problem](https://doi.org/10.1287/ijoc.2024.0642), with the related repository at [IJOC repository](https://github.com/INFORMSJoC/2024.0642).
+DOTmark instances** by R. Bargetto, F. Della Croce, and R. Scatamacchia.
+The mentioned research extends to image processing the research [Iterated Inside Out: a new exact algorithm for the transportation problem](https://doi.org/10.1287/ijoc.2024.0642), and the related repository [IJOC repository](https://github.com/INFORMSJoC/2024.0642).
 An ongoing development repository of the algorithm and all its variants is available at [Iterated Inside Out](https://github.com/robertobarg/IteratedInsideOut).
 
 
