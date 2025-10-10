@@ -1,7 +1,7 @@
 create table optresults
 (
     -- INSTANCE VALUES
-    ifname          varchar(32),    -- a string tagging the instance
+    ifname          varchar(48),    -- a string tagging the instance
     -- OPT ALG INFO
     algorithm       varchar(16),    -- a string describing the algorithm 
     optstatus       varchar(16),    -- the algorithm status
