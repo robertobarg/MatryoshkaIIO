@@ -195,6 +195,13 @@ TSimplex::TSimplex(const std::shared_ptr<TpInstance::TProblemData>& idatsptr, un
         case 0:
             reduced_cost_fptr = &TSimplex::computeReducedCostsPol_0;
             break;
+        case 6:
+            /// Versions: 6
+            if(tpdata_sptr->reduced)
+                reduced_cost_fptr = &TSimplex::computeReducedCostsPol_8_3_redi;
+            else
+                reduced_cost_fptr = &TSimplex::computeReducedCostsPol_8_3;
+            break;
         case 7:
             /// Versions: 7 --> 7_1
             if(ws2f == 0)
