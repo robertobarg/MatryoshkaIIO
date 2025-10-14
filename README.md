@@ -70,6 +70,7 @@ Comments in the SQL file [sql/result.sql](sql/result.sql) describe the space-sep
 To obtain the total run time, sum the values of `doublev9` and `doublev1`.
 
 The parameter `MYEPS` in [src/util.h](./src/util.h) allows fine-tuning of numerical precision when handling instances of different sizes.
+Its default value is `1e-9`, which is suitable for most instances. For very large-scale problems (e.g., with 512<sup>4</sup> or more variables), it is recommended to reduce this value to `1e-12` to improve numerical stability.
 
 Compilation and sample instance solution tests have been run also on a machine running Windows operating system.
 
