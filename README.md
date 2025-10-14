@@ -69,6 +69,8 @@ Comments in the SQL file [sql/result.sql](sql/result.sql) describe the space-sep
 **Notice** that, unlike the other implemented algorithms, the run times corresponding to the fields `runtime` and `doublev9` in the [SQL table](sql/result.sql) written by the Matryoshka algorithm in the `.optres` file include only the IIO time, not the initial solution time.
 To obtain the total run time, sum the values of `doublev9` and `doublev1`.
 
+The parameter `MYEPS` in [src/util.h](./src/util.h) allows fine-tuning of numerical precision when handling instances of different sizes.
+
 Compilation and sample instance solution tests have been run also on a machine running Windows operating system.
 
 
