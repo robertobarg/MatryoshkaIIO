@@ -1,10 +1,22 @@
 create table :tabname
 (
     -- INSTANCE VALUES
-    ifname          varchar(48),    -- a string tagging the instance
+    classnm         varchar(32),    -- a string tagging the instance
+    int1            integer,        -- a dummy v
+    imgsize1        integer,        -- IMG size
+    int2            integer,        -- a dummy v
+    imgsize2        integer,        -- IMG size
+    imgsize3        integer,        -- IMG size
+    imgsize4        integer,        -- IMG size
+    instance        varchar(16),    -- instance
+
     -- OPT ALG INFO
     algorithm       varchar(16),    -- a string describing the algorithm 
+    algmode         integer,        -- an integer for algorithm mode
+    
+    -- ALG STATUS
     optstatus       varchar(16),    -- the algorithm status
+    
     -- BASE OPT INFO
     rootlp          decimal,        -- IIO assings to this field the value 'nan' 
     rootime         decimal,        -- IIO assings to this field the value 'nan'
