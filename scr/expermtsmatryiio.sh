@@ -1,15 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 2 ]; then
-    echo "Error: This script requires exactly 2 arguments" >&2
-    echo "Usage: $0 <arg1> <arg2>" >&2
+if [ $# -ne 3 ]; then
+    echo "Error: This script requires exactly 3 arguments" >&2
+    echo "Usage: $0 <arg1> <arg2> <arg3>" >&2
     exit 1
 fi
 
 # executable file
 EXE=${1}
 IDIR=$(readlink -e ${2})
+# number of precesses
+PRS=${3}
 
+# test that data dir is a subdir
 if [[ $(realpath --relative-base="$PWD" "$IDIR") == /* ]]; then
     echo "Error: $IDIR is not a subdirectory of $PWD"
     exit 1
@@ -17,9 +20,6 @@ fi
 
 # Continue with your script here
 echo "Safe to proceed"
-
-# number of precesses
-PRS=3
 
 # prepare file of direcitives
 echo "${IDIR}/MicroscopyImages;_ALG_ 18111 5 46 518400 0;_OF_" > dirfile.csv
