@@ -75,6 +75,53 @@ Its default value is `1e-9`, which is suitable for most instances. For very larg
 Compilation and sample instance solution tests have been run also on a machine running Windows operating system.
 
 
+## Instruction to replicate the paper experiments
+If you want to replicate the paper experiments, you have to procede as follows.
+
+* Download the DOTmark dataset that is available at this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
+* Extract the `.zip` file of the dataset into the repo's root directory, you can eventually raname the dataset directory; as an example, let `DOTmark` be the dataset directory.
+* Compile the main program using the provided Makefile, e.g., in the repo's root directory run `make -j8`.
+* Generate all the instances with up 256<sup>4</sup> variables using this [script](./scr/exprinstances.sh); e.g.,
+````
+./scr/exprinstances.sh DOTmark/Data
+````
+* All the generated instances are collected in a directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`); note that the name of every instance matches the pattern `OF*_*.txt`, and every instance file is a TXT file.
+* You can solve by means of the algorithms MATR-IIO4D and IIO4D all the generated instances running the following commands from the command line in the the repo's root directory.
+````
+cd allinstances.wKAKN8Hc
+find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg
+find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg
+````
+* Change the value of the program eps. and recompile it. Namely, in file [src/util.h](./src/util.h), replace line 22
+````
+#define MYEPS           1.0e-9
+
+````
+with line
+````
+#define MYEPS           1.0e-12
+
+````
+* Recompile the main program with, e.g., `make -j8`.
+* Generate all the tested instances with 512<sup>4</sup> variables using this [script](./scr/exprinstances512.sh); e.g.,
+````
+./scr/exprinstances.sh DOTmark/Data
+````
+* All the generated instances are collected in a directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
+* You can solve by means of the algorithm MATR-IIO4D all the generated instances running the following commands from the command line in the the repo's root directory.
+````
+cd allinstances.cvnrk5qf
+find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg
+````
+* To collect all the optimization results and obtain tables like those in the repo's subdirectory [results](results/), use this [script](./scr/getresults.sh). Given the same example if names of the generated directories, by running the following commands from the command line in the the repo's root 
+````
+./scr/getresults.sh tprobopt sql allinstances.wKAKN8Hc
+./scr/getresults.sh tprobopt sql allinstances512.cvnrk5qf
+````
+
+[postgresql](https://www.postgresql.org/)
+
+
 ## Ongoing development and support
 This code is being developed on an ongoing basis.
 You may want to check out the code main developer's [GitHub site](https://github.com/robertobarg).
