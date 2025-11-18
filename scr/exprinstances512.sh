@@ -18,7 +18,7 @@ fi
 echo "Safe to proceed"
 
 # create destination dir
-DDIR=$(mktemp -d -p $(pwd) allinstances.XXXXXXXX)
+DDIR=$(mktemp -d -p $(pwd) allinstances512.XXXXXXXX)
 echo "All instances in directory: $DDIR"
 
 # generate all instances
