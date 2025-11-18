@@ -10,12 +10,12 @@ copy
         -- opt objf        
         objvalue as opt_objf,
         -- tot opt time
-        round(doublev9 / 1000.0, 3) as opt_tm_ms,
+        round(doublev9 / 1000.0, 3) as optsoltm_sec,
         -- init sol time
-        round(doublev1 / 1000.0, 3) as initsol_tm_ms,
+        round(doublev1 / 1000.0, 3) as initsoltm_sec,
         -- iterations
         intv5 as step2basischanges,
-        intv4 as iters
+        intv4 as iterations
     from :tab as tb
     order by algorithm, objftype, imgsize2, classnm, instance
     
