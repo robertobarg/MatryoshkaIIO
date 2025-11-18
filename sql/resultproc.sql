@@ -1,6 +1,7 @@
 create table :tabname
 (
     -- INSTANCE VALUES
+    objftype        varchar(8),    -- a string tagging the obj. f. type
     classnm         varchar(32),    -- a string tagging the instance
     int1            integer,        -- a dummy v
     imgsize1        integer,        -- IMG size
