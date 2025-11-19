@@ -75,50 +75,51 @@ Its default value is `1e-9`, which is suitable for most instances. For very larg
 Compilation and sample instance solution tests have been run also on a machine running Windows operating system.
 
 
-## Instruction to replicate the paper experiments
-If you want to replicate the paper experiments, you have to procede as follows.
+## Instructions to Replicate the Paper Experiments
+To replicate the paper experiments, follow these steps:
 
-* Download the DOTmark dataset that is available at this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
-* Extract the `.zip` file of the dataset into the root directory of the repository, you can eventually raname the dataset directory; e.g.,`DOTmark`.
-* Compile the main program using the provided Makefile, e.g., run the command `make -j8` in the root directory of the repository.
-* Generate all the instances with up 256<sup>4</sup> variables using this [script256](scr/exprinstances.sh) passing the first single argument the path to directory `Data` in the parent dataset directory; e.g., run the command  `./scr/exprinstances.sh DOTmark/Data`  in the root directory of the repository.
-* All the generated instances are collected in a directory matching pattern `allinstances.\*` (for example, `allinstances.wKAKN8Hc`).
-* Note that the name of every generated instance matches the pattern `OF*_*.txt`, and every instance file is a TXT file.
-* In the same way, you can generate the sample of instances with 512<sup>4</sup> variables using another script, this [script512](scr/exprinstances512.sh).
-* To solve the instance generated with [script256](scr/exprinstances.sh), you can use directly the compiled executable file `bin/iio`.
-* To solve the instance generated with [script512](scr/exprinstances512.sh), you need to recompile the source code after having updated the macro `MYEPS` definition in `src/util.h` from `1.0e-9` to `1.0e-12`, then recompile.
-* You can solve by means of the algorithms MATR-IIO4D and IIO4D all the generated instances using the algorithm configuration files `cfgs/matryiio4dtmrk.cfg` and `cfgs/iio4dtmrk.cfg` respectively.
-* Once you have solved all or part of the instances, you can generate gracefully formated tables of results using this [script](scr/getresults.sh); note that for using that script you need to have installed [postgreSQL](https://www.postgresql.org/).
+* **Download the DOTmark dataset** from this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
+* **Extract the dataset**: Unzip the file into the repository's root directory. You may rename the directory (e.g., `DOTmark`).
+* **Compile the main program**: Run `make -j8` in the root directory.
+* **Generate instances**:
+    * For instances with up to 256⁴ variables: Run this [script256](scr/exprinstances.sh), e.g., `./scr/exprinstances.sh DOTmark/Data`;
+    * For the 512⁴ variables sample: Run this other [script256](scr/exprinstances512.sh) `./scr/exprinstances512.sh DOTmark/Data`.
+* **Locate generated instances**:
+    * 256⁴ instances: Directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
+    * 512⁴ instances: Directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
+* **Instance file names**: All instances follow the pattern `OF*_*.txt`.
 
-Let's see below a detailed example of commands that assumes the current directory to be the root directory of the repository.
-
-To generate the set of instances with up 256<sup>4</sup> variables and sample of instances with 512<sup>5</sup> variables, run in the command line
-````
-./scr/exprinstances.sh DOTmark/Data
-./scr/exprinstances512.sh DOTmark/Data
-````
-Let `allinstances.wKAKN8Hc` be, as an example, the created directory collecting all the instances generated with the first command.
-To solve all these instance with both MATR-IIO4D and IIO4D, run in the command line
-````
+### Solving Instances
+**For 256⁴ instances** (use the already compiled binary):
+```bash
 (cd allinstances.wKAKN8Hc/ && \
     find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg && \
     find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg)
-````
-The command above solve the instances one at a time.
-If you a large computation power, you may prefer to articulate an advance command using, perhaps, `GNU parallel`.
+```
 
-After having updated the macro `MYEPS` definition in `src/util.h` from `1.0e-9` to `1.0e-12`, and recompiled the C++ code, you can solve the set instances with 512<sup>4</sup> variables in the directory with a name that looks like `allinstances512.cvnrk5qf`.
+**For 512⁴ instances** (requires recompilation):
 
-To collect all the optimization results and obtain tables like those reported in the directory [results](results/), run in command line
-````
+1. Update `MYEPS` value in [src/util.h](src/util.h) from `1.0e-9` to `1.0e-12`.
+2. Recompile: `make clean && make -j8`.
+3. Run the solver on the 512⁴ directory of instances.
+
+**Algorithm configurations**:
+
+* MATR-IIO4D: Use `cfgs/matryiio4dtmrk.cfg`
+* IIO4D: Use `cfgs/iio4dtmrk.cfg`
+
+### Generating Results
+
+To create formatted result tables (requires PostgreSQL):
+```bash
 ./scr/getresults.sh <dbname> <sql> <dir1>
 ./scr/getresults.sh <dbname> <sql> <dir2>
-````
-where
-* `<dbname>` is the name of the postgreSQL database you have created;
-* `<sql>` is the path to the directory [sql](sql/), and
-* `<dir1>` and `<dir2>` are, in our example `allinstances.wKAKN8Hc` and `allinstances512.cvnrk5qf` respectively.
+```
+Where:
 
+* `<dbname>` is your PostgreSQL database name;
+* `<sql>` is the path to the [sql](sql/) directory;
+* `<dir1>`, `<dir2>` are the instance directories (e.g., `allinstances.wKAKN8Hc`, `allinstances512.cvnrk5qf`).
 
 ## Ongoing development and support
 This code is being developed on an ongoing basis.
