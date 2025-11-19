@@ -101,7 +101,7 @@ To replicate the paper experiments, follow the steps below.
 * **Size of the instance set**: keep in mind that the whole instance set you generate will occupy ~6GB on your disk.
 
 ### Solving Instances
-**For 256⁴ instances** (use the already compiled binary):
+**For 256⁴ instances**, use the already compiled binary and run the commands below (the directory name follows the example).
 ```bash
 (cd allinstances.wKAKN8Hc/ && \
     find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg && \
