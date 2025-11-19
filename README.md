@@ -76,28 +76,29 @@ Compilation and sample instance solution tests have been run also on a machine r
 
 
 ## Instructions to Replicate the Paper Experiments
-To replicate the paper experiments, follow these steps:
+To replicate the paper experiments, follow the steps below.
 
 * **Download the DOTmark dataset** from this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
 * **Extract the dataset**: unzip the file into the repository's root directory. You may rename the directory (e.g., `DOTmark`).
 * **Compile the main program**: run `make -j8` in the root directory.
-* **Generate instances**
-    * For instances with up to 256⁴ variables: Run this [script256](scr/exprinstances.sh), e.g.,
+* **Generate the instances**
+    * For instances with up to 256⁴ variables, run this [script256](scr/exprinstances.sh), e.g.:
 
 ```bash
 ./scr/exprinstances.sh DOTmark/Data
 ```
 
-* For the 512⁴ variables sample: Run this other [script512](scr/exprinstances512.sh), e.g.,
+* For the sample of instances each with 512⁴ variables, run this other [script512](scr/exprinstances512.sh), e.g.:
 
 ```bash
 ./scr/exprinstances512.sh DOTmark/Data
 ```
 
-* **Locate generated instances**
+* **Locate the generated instances**
     * 256⁴ instances: directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
     * 512⁴ instances: directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
 * **Instance file names**: all instances follow the pattern `OF*_*.txt`.
+* **Size of the instance set**: keep in mind that the whole instance set you generate will occupy ~6GB on your disk.
 
 ### Solving Instances
 **For 256⁴ instances** (use the already compiled binary):
@@ -113,14 +114,14 @@ To replicate the paper experiments, follow these steps:
 2. Recompile: `make clean && make -j8`.
 3. Run the solver on the 512⁴ directory of instances.
 
-**Algorithm configurations**:
+**Algorithm configurations**
 
 * MATR-IIO4D: Use `cfgs/matryiio4dtmrk.cfg`
 * IIO4D: Use `cfgs/iio4dtmrk.cfg`
 
 ### Generating Results
 
-To create formatted result tables (requires PostgreSQL):
+To create formatted result tables (requires [PostgreSQL](https://www.postgresql.org/)), run the following commands:
 ```bash
 ./scr/getresults.sh <dbname> <sql> <dir1>
 ./scr/getresults.sh <dbname> <sql> <dir2>
