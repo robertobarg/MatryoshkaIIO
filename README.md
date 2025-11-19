@@ -79,9 +79,9 @@ Compilation and sample instance solution tests have been run also on a machine r
 To replicate the paper experiments, follow these steps:
 
 * **Download the DOTmark dataset** from this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
-* **Extract the dataset**: Unzip the file into the repository's root directory. You may rename the directory (e.g., `DOTmark`).
-* **Compile the main program**: Run `make -j8` in the root directory.
-* **Generate instances**:
+* **Extract the dataset**: unzip the file into the repository's root directory. You may rename the directory (e.g., `DOTmark`).
+* **Compile the main program**: run `make -j8` in the root directory.
+* **Generate instances**
     * For instances with up to 256⁴ variables: Run this [script256](scr/exprinstances.sh), e.g.,
 
 ```bash
@@ -94,10 +94,10 @@ To replicate the paper experiments, follow these steps:
 ./scr/exprinstances512.sh DOTmark/Data
 ```
 
-* **Locate generated instances**:
-    * 256⁴ instances: Directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
-    * 512⁴ instances: Directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
-* **Instance file names**: All instances follow the pattern `OF*_*.txt`.
+* **Locate generated instances**
+    * 256⁴ instances: directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
+    * 512⁴ instances: directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
+* **Instance file names**: all instances follow the pattern `OF*_*.txt`.
 
 ### Solving Instances
 **For 256⁴ instances** (use the already compiled binary):
