@@ -98,7 +98,7 @@ To replicate the paper experiments, follow the steps below.
     * 256⁴ instances: directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
     * 512⁴ instances: directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
 * **Instance file names**: all instances follow the pattern `OF*_*.txt`.
-* **Size of the instance set**: keep in mind that the whole instance set you generate will occupy ~6GB on your disk.
+* **Size of the instance set**: keep in mind that the whole instance set you generate will occupy **~6GB** on your disk.
 
 ### Solving Instances
 **For 256⁴ instances**, use the already compiled binary and run the commands below (the directory name follows the example).
@@ -116,8 +116,8 @@ To replicate the paper experiments, follow the steps below.
 
 **Algorithm configurations**
 
-* MATR-IIO4D: Use `cfgs/matryiio4dtmrk.cfg`
-* IIO4D: Use `cfgs/iio4dtmrk.cfg`
+* For MATR-IIO4D, use `cfgs/matryiio4dtmrk.cfg`
+* For IIO4D, use `cfgs/iio4dtmrk.cfg`
 
 ### Generating Results
 
