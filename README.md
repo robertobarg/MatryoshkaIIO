@@ -88,7 +88,7 @@ To replicate the paper experiments, follow these steps:
 ./scr/exprinstances.sh DOTmark/Data
 ```
 
-    * For the 512⁴ variables sample: Run this other [script512](scr/exprinstances512.sh), e.g.,
+* For the 512⁴ variables sample: Run this other [script512](scr/exprinstances512.sh), e.g.,
 
 ```bash
 ./scr/exprinstances512.sh DOTmark/Data
