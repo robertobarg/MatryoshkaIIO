@@ -121,12 +121,12 @@ To replicate the paper experiments, follow the steps below.
 
 ### Generating Results
 
-To create formatted result tables (requires [PostgreSQL](https://www.postgresql.org/)), run the following commands:
+Use this [script](scr/getresults.sh) to create formatted result tables (it requires [PostgreSQL](https://www.postgresql.org/)) by running the commands below,
 ```bash
 ./scr/getresults.sh <dbname> <sql> <dir1>
 ./scr/getresults.sh <dbname> <sql> <dir2>
 ```
-Where:
+where:
 
 * `<dbname>` is your PostgreSQL database name;
 * `<sql>` is the path to the [sql](sql/) directory;
