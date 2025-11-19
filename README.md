@@ -82,8 +82,18 @@ To replicate the paper experiments, follow these steps:
 * **Extract the dataset**: Unzip the file into the repository's root directory. You may rename the directory (e.g., `DOTmark`).
 * **Compile the main program**: Run `make -j8` in the root directory.
 * **Generate instances**:
-    * For instances with up to 256⁴ variables: Run this [script256](scr/exprinstances.sh), e.g., `./scr/exprinstances.sh DOTmark/Data`;
-    * For the 512⁴ variables sample: Run this other [script256](scr/exprinstances512.sh) `./scr/exprinstances512.sh DOTmark/Data`.
+    * For instances with up to 256⁴ variables: Run this [script256](scr/exprinstances.sh), e.g.,
+
+```bash
+./scr/exprinstances.sh DOTmark/Data
+```
+
+    * For the 512⁴ variables sample: Run this other [script512](scr/exprinstances512.sh), e.g.,
+
+```bash
+./scr/exprinstances512.sh DOTmark/Data
+```
+
 * **Locate generated instances**:
     * 256⁴ instances: Directory matching pattern `allinstances.*` (e.g., `allinstances.wKAKN8Hc`);
     * 512⁴ instances: Directory matching pattern `allinstances512.*` (e.g., `allinstances512.cvnrk5qf`).
