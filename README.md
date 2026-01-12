@@ -30,6 +30,10 @@ This repository includes
 * a [makefile](Makefile) to compile the C++ code and generate the executable file.
 
 
+## System requirements for experiment replication
+The replication scripts have been tested on Ubuntu 20.04.6 LTS (Linux, GNU coreutils); running them on other operating systems or non-GNU environments (e.g., macOS) may require adaptations.
+
+
 ## Problem instances
 The DOTmark dataset is available at this [link](https://www.stochastik.math.uni-goettingen.de/index.php?id=215/).
 A TP instance in the format of our software is to be generated with the script [generate an image processing TP](scr/geniptp.sh).
