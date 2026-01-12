@@ -31,7 +31,7 @@ This repository includes
 
 
 ## System requirements for experiment replication
-The replication scripts have been tested on Ubuntu 20.04.6 LTS (Linux, GNU coreutils); running them on other operating systems or non-GNU environments (e.g., macOS) may require adaptations.
+The replication scripts have been tested on Ubuntu 20.04 LTS and Ubuntu 22.04 LTS (Linux, GNU coreutils); running them on other operating systems or non-GNU environments (e.g., macOS) may require adaptations.
 
 
 ## Problem instances
