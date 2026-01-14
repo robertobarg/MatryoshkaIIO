@@ -108,8 +108,8 @@ To replicate the paper experiments, follow the steps below.
 **For 256⁴ instances**, use the already compiled binary and run the commands below (the directory name follows the example).
 ```bash
 (cd allinstances.wKAKN8Hc/ && \
-    find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg && \
-    find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg)
+    find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg \; && \
+    find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg \; )
 ```
 
 **For 512⁴ instances** (requires recompilation):
