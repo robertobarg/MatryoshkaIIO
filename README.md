@@ -112,6 +112,14 @@ To replicate the paper experiments, follow the steps below.
     find . -type f -name "OF*_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg \; )
 ```
 
+If you want to run the experiment only for a subset of the generated instances, you can specify a different wildcard using the `-name` option of the find command.
+For example, to run the experiment for instances of class `CauchyDensity` with up to 32⁴ variables, you can use the command below:
+```bash
+(cd allinstances.wKAKN8Hc/ && \
+    find . -type f -name "OF*_CauchyDensity_1_32_*.txt" -exec ../bin/iio {} ../cfgs/matryiio4dtmrk.cfg \; && \
+    find . -type f -name "OF*_CauchyDensity_1_32_*.txt" -exec ../bin/iio {} ../cfgs/iio4dtmrk.cfg \; )
+```
+
 **For 512⁴ instances** (requires recompilation):
 
 1. Update `MYEPS` value in [src/util.h](src/util.h) from `1.0e-9` to `1.0e-12`.
