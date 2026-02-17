@@ -139,6 +139,10 @@ First, create a databese by running the command
 ```bash
 psql -c"CREATE DATABASE <dbname>"
 ```
+where:
+
+* `<dbname>` is the name of your PostgreSQL database.
+
 
 Then, use this [script](scr/getresults.sh) to create formatted result tables by running the commands below,
 ```bash
