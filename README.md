@@ -133,7 +133,14 @@ For example, to run the experiment for instances of class `CauchyDensity` with u
 
 ### Generating Results
 
-Use this [script](scr/getresults.sh) to create formatted result tables (it requires [PostgreSQL](https://www.postgresql.org/)) by running the commands below,
+It requires [PostgreSQL](https://www.postgresql.org/).
+
+First, create a databese by running the command
+```bash
+psql -c"CREATE DATABASE <dbname>"
+```
+
+Then, use this [script](scr/getresults.sh) to create formatted result tables by running the commands below,
 ```bash
 ./scr/getresults.sh <dbname> <sql> <dir1>
 ./scr/getresults.sh <dbname> <sql> <dir2>
