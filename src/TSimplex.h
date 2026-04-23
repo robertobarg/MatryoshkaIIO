@@ -87,7 +87,7 @@ public:
     optresult tree_minimum_rule(const std::shared_ptr<tplex_alg_data>& tplxd_sptr = nullptr);
     
     /// main class methods
-    optresult tsimplex(double tlim = std::numeric_limits<double>::quiet_NaN(), bool alginfolog = false, bool reptab = false);
+    optresult tsimplex(double tlim = std::numeric_limits<double>::quiet_NaN(), bool alginfolog = false, bool reptab = false, bool d2fsolnduals = false);
     
     std::shared_ptr<ts_sol> getBasis();
     
@@ -99,6 +99,9 @@ public:
                      const optresult&, 
                      bool in_sol_red = false);
     
+    void writeSol(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn = "", std::string sep = " ");
+    void writeDuals(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn = "", std::string sep = " ");
+
 private:
     struct algo_config
     {

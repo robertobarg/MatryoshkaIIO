@@ -217,6 +217,8 @@ public:
         std::vector<NodeArcIdType> destinations_map_bw;
         
         std::string name = "";
+        std::string alg_name = "";
+        std::string alg_mode = "";
         std::string initial_base_fname = "current_base.txt";
         std::string solution_output_fname = "current_sol.txt";
         bool dump_down_sol = false;

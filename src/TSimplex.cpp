@@ -507,7 +507,7 @@ void TSimplex::setSolution(const std::shared_ptr<std::vector<std::pair<NodeArcId
     }
 }
 
-optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
+optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2fsolnduals)
 {
     /// Simplex for the transportation problem
     /// 
@@ -905,6 +905,14 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab)
     cmp_times[8] += GETOPTTMS(st_0);
     clock_t endt = clock();
     elapsed_usrt_ms = 1000.0 * double(endt - startt) / CLOCKS_PER_SEC;
+    
+    #ifdef WRTSOLNDUALS
+    if(d2fsolnduals)
+    {
+        this->writeSol(tplexd_sptr, std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol"));
+        this->writeDuals(tplexd_sptr, std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals"));
+    }
+    #endif
     
     /// store opt data
     optdata_sptr = tplexd_sptr;
@@ -2967,6 +2975,39 @@ TSimplex::pivoting(const std::shared_ptr<tplex_alg_data>& tplexd_sptr,
     #endif
     
     return std::make_tuple(iter, saved_lpsrch, failed_lpsrch, succes_lpsrch, s1tm, s2tm);
+}
+
+void TSimplex::writeSol(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn, std::string sep)
+{
+    std::ofstream bfile(fn == "" ? ".basis" : fn);
+
+    for(NodeArcIdType i = 0; i < tpdata_sptr->m; i++)
+    {
+        for(NodeArcIdType j = 0; j < tpdata_sptr->n; j++)
+        {
+            if(tplexd_sptr->quantities.contains(i * tpdata_sptr->n + j))
+            {
+                bfile << i << sep << j << sep << std::round(tplexd_sptr->quantities.get(i * tpdata_sptr->n + j)) << sep << tpdata_sptr->costs[i * tpdata_sptr->n + j] << std::endl;
+            }
+        }
+    }
+    
+    bfile.close();    
+}
+
+void TSimplex::writeDuals(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn, std::string sep)
+{
+    std::ofstream dfile(fn == "" ? ".duals" : fn);
+    
+    for (NodeArcIdType i = 0; i < tpdata_sptr->m; i++)
+        dfile << std::round(tplexd_sptr->us[i]) << (i + 1 < tpdata_sptr->m ? " " : ""); 
+    dfile << std::endl;
+    
+    for (NodeArcIdType j = 0; j < tpdata_sptr->n; j++)
+        dfile << std::round(tplexd_sptr->vs[j]) << (j + 1 < tpdata_sptr->n ? " " : ""); 
+    dfile << std::endl;
+    
+    dfile.close();    
 }
 
 tplex_alg_data::tplex_alg_data(const std::shared_ptr<TpInstance::TProblemData>& tpdsptr, bool to_fill)

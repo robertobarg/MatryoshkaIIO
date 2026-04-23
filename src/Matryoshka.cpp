@@ -125,7 +125,7 @@ optresult Matryoshka::run(const optcfg& opt_config)
         timing[l + 1][0] = GETOPTTMS(setsol);
         
         /// solve
-        optres = tspx.tsimplex(opt_config.timelimsec, l == levels ? true : false, l == levels ? true : false);
+        optres = tspx.tsimplex(opt_config.timelimsec, l == levels ? true : false, l == levels ? true : false, l == levels ? true : false);
         if(l + 1 < tprob_data_ptrs.size())
             sol_sptr = tspx.getSolutionArcs(true, true);
         #ifdef TESTDBG

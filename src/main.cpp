@@ -48,7 +48,11 @@ int main(int argc, char **argv)
 
         /// read the problem instance
         std::shared_ptr<TpInstance> inst_sptr(new TpInstance(ifname));
-
+        inst_sptr->getInstanceData()->name = basefn;
+        inst_sptr->getInstanceData()->alg_name = std::string(getAlg(optc.opt_algo));
+        inst_sptr->getInstanceData()->alg_mode = std::to_string(optc.alg_mode);
+        
+        
         /// log configuration info
         FILE_LOG(logINFO) << log_opt_config(optc);
         
@@ -77,7 +81,7 @@ int main(int argc, char **argv)
                       optc.dblp0);
         
         /// get opt. data
-        optres = tspx.tsimplex(optc.timelimsec, true, true);
+        optres = tspx.tsimplex(optc.timelimsec, true, true, true);
 
         #ifdef EXPTRACING_2
         tspx.dump_tracing_data_to_file(std::string(getAlg(optc.opt_algo) + "_" + std::to_string(optc.alg_mode)), basefn);
