@@ -909,8 +909,12 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2f
     #ifdef WRTSOLNDUALS
     if(d2fsolnduals)
     {
-        this->writeSol(tplexd_sptr, std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol"));
-        this->writeDuals(tplexd_sptr, std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals"));
+        std::string solfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol");
+        std::string dualsfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals");
+        this->writeSol(tplexd_sptr, solfname);
+        FILE_LOG(logINFO) << "Solution date in file '" << solfname << "'";
+        this->writeDuals(tplexd_sptr, dualsfname);
+        FILE_LOG(logINFO) << "Duals in file '" << dualsfname << "'";
     }
     #endif
     
