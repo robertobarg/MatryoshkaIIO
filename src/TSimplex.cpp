@@ -909,12 +909,22 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2f
     #ifdef WRTSOLNDUALS
     if(d2fsolnduals)
     {
-        std::string solfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol");
+        /// write dual sol to file
         std::string dualsfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals");
-        this->writeSol(tplexd_sptr, solfname);
-        FILE_LOG(logINFO) << "Solution date in file '" << solfname << "'";
+        /// log info
+        FILE_LOG(logINFO) << "Writing dual solution to file (.duals). This may take a while...";
+        /// write
         this->writeDuals(tplexd_sptr, dualsfname);
-        FILE_LOG(logINFO) << "Duals in file '" << dualsfname << "'";
+        /// log info
+        FILE_LOG(logINFO) << "Dual solution written to '" << dualsfname << "'";
+        /// write primal sol to file
+        std::string solfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol");
+        /// log info
+        FILE_LOG(logINFO) << "Writing primal solution to file (.sol). This may take a while...";
+        /// write
+        this->writeSol(tplexd_sptr, solfname);
+        /// log info
+        FILE_LOG(logINFO) << "Primal solution written to '" << solfname << "'";
     }
     #endif
     
