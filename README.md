@@ -165,20 +165,20 @@ If the C++ code is compiled with option:
 ```
 
 additional outputs are generated for each instance.
-The output file with extension `.optres` contains both
+The output file with extension `.optres` contains both:
 
-* primal objective value
-* dual objective value (computed from row/column duals at optimality)
+* primal objective value;
+* dual objective value (computed from row/column duals at optimality).
 
 See comments in [this file](sql/result.sql) to locate the primal and dual objective function values in the `.optres` file.
 
 A file with extension `.duals` is generated for storing dual variables (potentials).
 
-* line 1: row potentials
-* line 2: column potentials
+* line 1: `row potentials`
+* line 2: `column potentials`
 
 A file with extension `.sol` is generated for storing the optimal primal solution.
-The file contains one line for each basic variable in the optimal solution
+The file contains one line for each basic variable in the optimal solution:
 
 ```bash
 <row_index> <column_index> <value> <cost_coeff>
