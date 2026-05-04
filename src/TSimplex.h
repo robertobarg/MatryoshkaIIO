@@ -99,9 +99,11 @@ public:
                      const optresult&, 
                      bool in_sol_red = false);
     
+    double computeDualObjF(const std::shared_ptr<tplex_alg_data>& tplexd_sptr);
+    
     void writeSol(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn = "", std::string sep = " ");
     void writeDuals(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn = "", std::string sep = " ");
-
+    
 private:
     struct algo_config
     {

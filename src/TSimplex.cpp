@@ -909,6 +909,8 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2f
     #ifdef WRTSOLNDUALS
     if(d2fsolnduals)
     {
+        /// dual sol objf
+        optres.best_bound = this->computeDualObjF(tplexd_sptr);
         /// write dual sol to file
         std::string dualsfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals");
         /// log info
@@ -3007,6 +3009,19 @@ void TSimplex::writeSol(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std:
     }
     
     bfile.close();    
+}
+
+double TSimplex::computeDualObjF(const std::shared_ptr<tplex_alg_data>& tplexd_sptr)
+{
+    double retv = 0.0;
+    
+    for (NodeArcIdType i = 0; i < tpdata_sptr->m; i++)
+        retv += std::round(tplexd_sptr->us[i]) * tpdata_sptr->sources[i]; 
+    
+    for (NodeArcIdType j = 0; j < tpdata_sptr->n; j++)
+        retv += std::round(tplexd_sptr->vs[j]) * tpdata_sptr->destinations[j]; 
+
+    return retv;
 }
 
 void TSimplex::writeDuals(const std::shared_ptr<tplex_alg_data>& tplexd_sptr, std::string fn, std::string sep)
