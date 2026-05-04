@@ -27,7 +27,7 @@ This repository includes
 * the program configuration files to replicate the paper experiments, directory [cfgs](cfgs/),
 * an SQL script for creating a relational database of the optimization results, directory [sql](sql/), 
 * a set of useful scripts you may need, directory [scr](scr/), 
-* a Python script for the verification of solutions and objective function values in directory [py](py/), and
+* a Python script for verifying solutions and objective function values, directory [py](py/), and
 * a [makefile](Makefile) to compile the C++ code and generate the executable file.
 
 
