@@ -8,7 +8,7 @@ create table :tabname
     -- BASE OPT INFO
     rootlp          decimal,        -- IIO assings to this field the value 'nan' 
     rootime         decimal,        -- IIO assings to this field the value 'nan'
-    bestbound       decimal,        -- IIO assings to this field the value 'nan'
+    bestbound       decimal,        -- IIO assings to this field the value of the dual objective function if the code is compile with flag 'WRTSOLNDUALS'
     objvalue        decimal,        -- the objective function value
     optgap          decimal,        -- IIO assings to this field the value 'nan'
     runtime         decimal,        -- the optimization runtime in seconds
