@@ -158,7 +158,7 @@ where:
 
 ## Optional dual output and verification (`-DWRTSOLNDUALS`)
 
-If the code is compiled with:
+If the C++ code is compiled with option:
 
 ```bash
 -DWRTSOLNDUALS
@@ -169,6 +169,8 @@ The output file with extension `.optres` contains both
 
 * primal objective value
 * dual objective value (computed from row/column duals at optimality)
+
+See comments in [this file](sql/result.sql) to locate the primal and dual objective function values in the `.optres` file.
 
 A file with extension `.duals` is generated for storing dual variables (potentials).
 
