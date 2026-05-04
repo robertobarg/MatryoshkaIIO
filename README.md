@@ -26,7 +26,8 @@ This repository includes
 * the complete results of the experiments, directory [results](results/),
 * the program configuration files to replicate the paper experiments, directory [cfgs](cfgs/),
 * an SQL script for creating a relational database of the optimization results, directory [sql](sql/), 
-* a set of useful scripts you may need, directory [scr](scr/), and
+* a set of useful scripts you may need, directory [scr](scr/), 
+* a Python script for the verification of solutions and objective function values in directory [py](py/), and
 * a [makefile](Makefile) to compile the C++ code and generate the executable file.
 
 
@@ -154,6 +155,48 @@ where:
 * `<dbname>` is your PostgreSQL database name;
 * `<sql>` is the path to the [sql](sql/) directory;
 * `<dir1>`, `<dir2>` are the instance directories (e.g., `allinstances.wKAKN8Hc`, `allinstances512.cvnrk5qf`).
+
+## Optional dual output and verification (`-DWRTSOLNDUALS`)
+
+If the code is compiled with:
+
+```bash
+-DWRTSOLNDUALS
+```
+
+additional outputs are generated for each instance.
+The output file with extension `.optres` contains both
+
+* primal objective value
+* dual objective value (computed from row/column duals at optimality)
+
+A file with extension `.duals` is generated for storing dual variables (potentials).
+
+* line 1: row potentials
+* line 2: column potentials
+
+A file with extension `.sol` is generated for storing the optimal primal solution.
+The file contains one line for each basic variable in the optimal solution
+
+```bash
+<row_index> <column_index> <value> <cost_coeff>
+```
+
+The Python script [tp_obj](py/tp_obj.py) can be used to verify consistency between primal and dual solutions.
+
+Examples:
+
+```bash
+python py/tp_obj.py dual instance.duals instance_file
+python py/tp_obj.py sol instance.sol instance_file
+python py/tp_obj.py compare instance.duals instance_file instance.sol
+```
+
+You can check the script help for further information.
+
+```bash
+python py/tp_obj.py --help
+```
 
 ## Ongoing development and support
 This code is being developed on an ongoing basis.
