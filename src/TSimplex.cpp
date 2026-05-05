@@ -910,11 +910,13 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2f
     if(d2fsolnduals)
     {
         /// dual sol objf
+        FILE_LOG(logINFO) << "Compute dual objective function ...";
         optres.best_bound = this->computeDualObjF(tplexd_sptr);
+        FILE_LOG(logINFO) << "Dual Obj. F. " << std::setprecision(0) << std::fixed << optres.best_bound;
         /// write dual sol to file
         std::string dualsfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".duals");
         /// log info
-        FILE_LOG(logINFO) << "Writing dual solution to file (.duals). This may take a while...";
+        FILE_LOG(logINFO) << "Writing dual solution to file (.duals). This may take a while ...";
         /// write
         this->writeDuals(tplexd_sptr, dualsfname);
         /// log info
@@ -922,7 +924,7 @@ optresult TSimplex::tsimplex(double tlim, bool alginfolog, bool reptab, bool d2f
         /// write primal sol to file
         std::string solfname = std::string(tpdata_sptr->name + "_" + tpdata_sptr->alg_name + "_" + tpdata_sptr->alg_mode + ".sol");
         /// log info
-        FILE_LOG(logINFO) << "Writing primal solution to file (.sol). This may take a while...";
+        FILE_LOG(logINFO) << "Writing primal solution to file (.sol). This may take a while ...";
         /// write
         this->writeSol(tplexd_sptr, solfname);
         /// log info
