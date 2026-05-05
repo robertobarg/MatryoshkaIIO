@@ -33,7 +33,7 @@ LibPath                := $(LibraryPathSwitch).
 AR       := ar crs
 CXX      := g++
 CC       := gcc
-CXXFLAGS :=  -O3 -fexpensive-optimizations -std=c++14 -Wall -Wno-sign-compare -Wno-reorder -Wno-deprecated-declarations -m64 -fPIC -fno-strict-aliasing -fexceptions -fno-signed-zeros -fno-trapping-math -frename-registers -funroll-loops -DSKIPTHETA0 -DLAZYCLUST -DTSSOLSPRS -DREDINST -DINSVS -DDTMRKS -DEDOTF -DCOUTRLOG -DWRTSOLNDUALS $(Preprocessors)
+CXXFLAGS :=  -O3 -fexpensive-optimizations -std=c++14 -Wall -Wno-sign-compare -Wno-reorder -Wno-deprecated-declarations -m64 -fPIC -fno-strict-aliasing -fexceptions -fno-signed-zeros -fno-trapping-math -frename-registers -funroll-loops -DSKIPTHETA0 -DLAZYCLUST -DTSSOLSPRS -DREDINST -DINSVS -DDTMRKS -DEDOTF -DCOUTRLOG $(Preprocessors)
 CFLAGS   :=  -O2 -Wall $(Preprocessors)
 ASFLAGS  := 
 AS       := as
